@@ -357,7 +357,7 @@ func (s *AuthService) CompleteAdminRegister(req model.CompleteAdminRegisterReque
 		Email:     session.Email,
 		Password:  session.PasswordHash,
 		Status:    "active",
-		KYCStatus: "pending",
+		KYCStatus: "approved",
 	}
 
 	err = s.userRepository.CreateUser(tx, user)

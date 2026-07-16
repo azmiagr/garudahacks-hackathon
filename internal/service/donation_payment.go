@@ -59,6 +59,7 @@ type DonationPaymentService struct {
 	orderRepository              repository.IOrderRepository
 	orderItemRepository          repository.IOrderItemRepository
 	custodyLogRepository         repository.ICustodyLogRepository
+	pointService                 IPointService
 	midtransConfig               *config.MidtransConfig
 	coreClient                   coreapi.Client
 }
@@ -73,6 +74,7 @@ func NewDonationPaymentService(
 	orderRepository repository.IOrderRepository,
 	orderItemRepository repository.IOrderItemRepository,
 	custodyLogRepository repository.ICustodyLogRepository,
+	pointService IPointService,
 	midtransConfig *config.MidtransConfig,
 ) IDonationPaymentService {
 	return &DonationPaymentService{
@@ -86,6 +88,7 @@ func NewDonationPaymentService(
 		orderRepository:              orderRepository,
 		orderItemRepository:          orderItemRepository,
 		custodyLogRepository:         custodyLogRepository,
+		pointService:                 pointService,
 		midtransConfig:               midtransConfig,
 		coreClient:                   midtransConfig.NewCoreAPIClient(),
 	}
@@ -367,6 +370,11 @@ func (s *DonationPaymentService) lockDonation(tx *gorm.DB, payment *entity.Payme
 	err = s.paymentTransactionRepository.UpdatePaymentTransaction(tx, payment)
 	if err != nil {
 		return nil, err
+	}
+	if s.pointService != nil {
+		if err := s.pointService.AwardDonationPaymentPoints(tx, payment); err != nil {
+			return nil, err
+		}
 	}
 
 	return &model.DonationLockStatusResponse{

@@ -23,7 +23,11 @@ func Seed(db *gorm.DB) error {
 		return err
 	}
 
-	return seedAdmin(db)
+	if err := seedAdmin(db); err != nil {
+		return err
+	}
+
+	return seedRewards(db)
 }
 
 func seedRoles(db *gorm.DB) error {
@@ -107,4 +111,62 @@ func seedAdmin(db *gorm.DB) error {
 
 		return tx.Create(&user).Error
 	})
+}
+
+func seedRewards(db *gorm.DB) error {
+	rewards := []entity.Reward{
+		{
+			RewardID:     uuid.MustParse("aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa"),
+			Name:         "Pulsa Rp25.000",
+			Description:  "Semua operator",
+			RewardType:   "pulsa",
+			PointsCost:   1000,
+			Stock:        100,
+			IsActive:     true,
+			ValidityDays: 0,
+		},
+		{
+			RewardID:     uuid.MustParse("bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb"),
+			Name:         "Voucher e-commerce Rp50.000",
+			Description:  "Berlaku 90 hari",
+			RewardType:   "voucher",
+			PointsCost:   1800,
+			Stock:        50,
+			IsActive:     true,
+			ValidityDays: 90,
+		},
+		{
+			RewardID:     uuid.MustParse("cccccccc-3333-4333-8333-cccccccccccc"),
+			Name:         "Donasikan kembali poin",
+			Description:  "1 poin = Rp10 ke posko pilihan",
+			RewardType:   "donation",
+			PointsCost:   1,
+			Stock:        999999,
+			IsActive:     true,
+			ValidityDays: 0,
+		},
+	}
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		for _, reward := range rewards {
+			if err := seedReward(tx, reward); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
+func seedReward(tx *gorm.DB, reward entity.Reward) error {
+	var existingReward entity.Reward
+	err := tx.Where("reward_id = ?", reward.RewardID).First(&existingReward).Error
+	if err == nil {
+		return nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+
+	return tx.Create(&reward).Error
 }

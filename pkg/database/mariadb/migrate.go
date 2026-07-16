@@ -28,6 +28,10 @@ func Migrate(db *gorm.DB) error {
 		&entity.AdminProfile{},
 		&entity.DonorProfile{},
 		&entity.PaymentTransactions{},
+		&entity.PointAccount{},
+		&entity.PointTransaction{},
+		&entity.Reward{},
+		&entity.RewardClaim{},
 	)
 
 	if err != nil {
