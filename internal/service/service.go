@@ -14,6 +14,7 @@ type Service struct {
 	AuthService            IAuthService
 	AdminDashboardService  IAdminDashboardService
 	AdminEventService      IAdminEventService
+	AdminProfileService    IAdminProfileService
 }
 
 func NewService(repository *repository.Repository, bcrypt bcrypt.Interface, jwtAuth jwt.Interface, supabase supabase.Interface) *Service {
@@ -24,5 +25,6 @@ func NewService(repository *repository.Repository, bcrypt bcrypt.Interface, jwtA
 		AuthService:            NewAuthService(repository.UserRepository, repository.RoleRepository, repository.RegistrationRepository, repository.AdminPoskoProfileRepository, bcrypt, jwtAuth),
 		AdminDashboardService:  NewAdminDashboardService(repository.AdminDashboardRepository),
 		AdminEventService:      NewAdminEventService(repository.PostRepository, repository.DisasterReportRepository, repository.DisasterEventRepository, repository.RequestRepository, repository.ItemRepository, supabase),
+		AdminProfileService:    NewAdminProfileService(repository.RoleRepository, repository.AdminPoskoProfileRepository),
 	}
 }
