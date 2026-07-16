@@ -3,6 +3,7 @@ package repository
 import (
 	"strings"
 
+	"github.com/azmiagr/garudahacks-hackathon/entity"
 	"github.com/azmiagr/garudahacks-hackathon/model"
 	"gorm.io/gorm"
 )
@@ -110,7 +111,15 @@ func (r *DeliveryVerificationRepository) GetVerifiedFulfillmentRate(tx *gorm.DB,
 			END) AS verified_orders
 		`).
 		Joins("LEFT JOIN delivery_verifications AS dv ON dv.order_id = o.order_id").
-		Where("o.order_status = ?", "approved")
+		Where("o.order_status IN ?", []string{
+			entity.OrderStatusAccepted,
+			entity.OrderStatusPreparing,
+			entity.OrderStatusReadyForPickup,
+			entity.OrderStatusPickedUp,
+			entity.OrderStatusInTransit,
+			entity.OrderStatusDelivered,
+			entity.OrderStatusCompleted,
+		})
 
 	if year > 0 {
 		query = query.Where("YEAR(o.created_at) = ?", year)

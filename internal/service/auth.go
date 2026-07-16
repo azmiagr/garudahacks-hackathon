@@ -155,7 +155,8 @@ func (s *AuthService) RequestRegisterOtp(req model.RequestAdminRegisterOtpReques
 	sessionID := uuid.New()
 
 	existingSession, err := s.registrationRepository.GetRegistrationSession(tx, model.GetRegistrationSessionParam{
-		Email: email,
+		Email:    email,
+		RoleName: roleName,
 	})
 	if err == nil && existingSession != nil {
 		sessionID = existingSession.RegistrationID

@@ -5,55 +5,57 @@ import (
 )
 
 type Repository struct {
-	UserRepository                 IUserRepository
-	RoleRepository                 IRoleRepository
-	RegistrationRepository         IRegistrationRepository
-	AdminPoskoProfileRepository    IAdminPoskoProfileRepository
-	DonorProfileRepository         IDonorProfileRepository
-	AdminDashboardRepository       IAdminDashboardRepository
-	PostRepository                 IPostRepository
-	DisasterReportRepository       IDisasterReportRepository
-	DisasterEventRepository        IDisasterEventRepository
-	RequestRepository              IRequestRepository
-	ItemRepository                 IItemRepository
-	DeliveryVerificationRepository IDeliveryVerificationRepository
-	DonationRepository             IDonationRepository
-	DisbursementRepository         IDisbursementRepository
-	CustodyLogRepository           ICustodyLogRepository
-	OtpRepository                  IOtpRepository
-	WalletRepository               IWalletRepository
-	WalletTransactionRepository    IWalletTransactionRepository
-	PaymentTransactionRepository   IPaymentTransactionRepository
-	OrderRepository                IOrderRepository
-	OrderItemRepository            IOrderItemRepository
-	PointRepository                IPointRepository
-	StoreRepository                IStoreRepository
+	UserRepository                  IUserRepository
+	RoleRepository                  IRoleRepository
+	RegistrationRepository          IRegistrationRepository
+	AdminPoskoProfileRepository     IAdminPoskoProfileRepository
+	DonorProfileRepository          IDonorProfileRepository
+	AdminDashboardRepository        IAdminDashboardRepository
+	PostRepository                  IPostRepository
+	DisasterReportRepository        IDisasterReportRepository
+	DisasterEventRepository         IDisasterEventRepository
+	RequestRepository               IRequestRepository
+	ItemRepository                  IItemRepository
+	DeliveryVerificationRepository  IDeliveryVerificationRepository
+	DonationRepository              IDonationRepository
+	DisbursementRepository          IDisbursementRepository
+	CustodyLogRepository            ICustodyLogRepository
+	OtpRepository                   IOtpRepository
+	WalletRepository                IWalletRepository
+	WalletTransactionRepository     IWalletTransactionRepository
+	PaymentTransactionRepository    IPaymentTransactionRepository
+	OrderRepository                 IOrderRepository
+	OrderItemRepository             IOrderItemRepository
+	PointRepository                 IPointRepository
+	StoreRepository                 IStoreRepository
+	CustodyHandshakeTokenRepository ICustodyHandshakeTokenRepository
 }
 
 func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{
-		UserRepository:                 NewUserRepository(db),
-		RoleRepository:                 NewRoleRepository(db),
-		RegistrationRepository:         NewRegistrationRepository(db),
-		AdminPoskoProfileRepository:    NewAdminPoskoProfileRepository(db),
-		DonorProfileRepository:         NewDonorProfileRepository(db),
-		AdminDashboardRepository:       NewAdminDashboardRepository(db),
-		PostRepository:                 NewPostRepository(db),
-		DisasterReportRepository:       NewDisasterReportRepository(db),
-		DisasterEventRepository:        NewDisasterEventRepository(db),
-		RequestRepository:              NewRequestRepository(db),
-		ItemRepository:                 NewItemRepository(db),
-		DeliveryVerificationRepository: NewDeliveryVerificationRepository(db),
-		DonationRepository:             NewDonationRepository(db),
-		DisbursementRepository:         NewDisbursementRepository(db),
-		CustodyLogRepository:           NewCustodyLogRepository(db),
-		OtpRepository:                  NewOtpRepository(db),
-		WalletRepository:               NewWalletRepository(db),
-		WalletTransactionRepository:    NewWalletTransactionRepository(db),
-		PaymentTransactionRepository:   NewPaymentTransactionRepository(db),
-		OrderRepository:                NewOrderRepository(db),
-		OrderItemRepository:            NewOrderItemRepository(db),
-		PointRepository:                NewPointRepository(db),
-		StoreRepository:                NewStoreRepository(db),
+		UserRepository:                  NewUserRepository(db),
+		RoleRepository:                  NewRoleRepository(db),
+		RegistrationRepository:          NewRegistrationRepository(db),
+		AdminPoskoProfileRepository:     NewAdminPoskoProfileRepository(db),
+		DonorProfileRepository:          NewDonorProfileRepository(db),
+		AdminDashboardRepository:        NewAdminDashboardRepository(db),
+		PostRepository:                  NewPostRepository(db),
+		DisasterReportRepository:        NewDisasterReportRepository(db),
+		DisasterEventRepository:         NewDisasterEventRepository(db),
+		RequestRepository:               NewRequestRepository(db),
+		ItemRepository:                  NewItemRepository(db),
+		DeliveryVerificationRepository:  NewDeliveryVerificationRepository(db),
+		DonationRepository:              NewDonationRepository(db),
+		DisbursementRepository:          NewDisbursementRepository(db),
+		CustodyLogRepository:            NewCustodyLogRepository(db),
+		OtpRepository:                   NewOtpRepository(db),
+		WalletRepository:                NewWalletRepository(db),
+		WalletTransactionRepository:     NewWalletTransactionRepository(db),
+		PaymentTransactionRepository:    NewPaymentTransactionRepository(db),
+		OrderRepository:                 NewOrderRepository(db),
+		OrderItemRepository:             NewOrderItemRepository(db),
+		PointRepository:                 NewPointRepository(db),
+		StoreRepository:                 NewStoreRepository(db),
+		CustodyHandshakeTokenRepository: NewCustodyHandshakeTokenRepository(db),
 	}
 }

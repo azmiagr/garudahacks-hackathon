@@ -5,6 +5,7 @@ import "github.com/google/uuid"
 type GetRegistrationSessionParam struct {
 	RegistrationID uuid.UUID `json:"registration_id"`
 	Email          string    `json:"email"`
+	RoleName       string    `json:"role_name"`
 }
 
 type GetRoleParam struct {

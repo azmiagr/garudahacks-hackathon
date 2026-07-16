@@ -22,6 +22,7 @@ type Service struct {
 	DonationPaymentService  IDonationPaymentService
 	DonorTransactionService IDonorTransactionService
 	PointService            IPointService
+	StoreCustodyService     IStoreCustodyService
 }
 
 func NewService(repository *repository.Repository, bcrypt bcrypt.Interface, jwtAuth jwt.Interface, supabase supabase.Interface, midtransConfig *config.MidtransConfig, hasher hash.Interface) *Service {
@@ -40,6 +41,7 @@ func NewService(repository *repository.Repository, bcrypt bcrypt.Interface, jwtA
 		DonorDashboardService:   NewDonorDashboardService(repository.PostRepository, repository.ItemRepository, publicDashboardService),
 		DonorTransactionService: NewDonorTransactionService(repository.DonationRepository),
 		PointService:            pointService,
+		StoreCustodyService:     NewStoreCustodyService(repository.OrderRepository, repository.StoreRepository, repository.CustodyLogRepository, repository.CustodyHandshakeTokenRepository),
 		DonationPaymentService: NewDonationPaymentService(
 			repository.RequestRepository,
 			repository.ItemRepository,

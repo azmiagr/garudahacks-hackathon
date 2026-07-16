@@ -3,13 +3,18 @@ package repository
 import (
 	"github.com/azmiagr/garudahacks-hackathon/entity"
 	"github.com/azmiagr/garudahacks-hackathon/model"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type ICustodyLogRepository interface {
 	GetLatestPublicLedger(tx *gorm.DB, year int, limit int) ([]model.PublicLedgerRow, error)
 	GetLatestCustodyLog(tx *gorm.DB) (*entity.CustodyLogs, error)
+	GetLatestCustodyLogByOrderForUpdate(tx *gorm.DB, orderID uuid.UUID) (*entity.CustodyLogs, error)
+	ListCustodyLogsByOrder(tx *gorm.DB, orderID uuid.UUID) ([]entity.CustodyLogs, error)
 	CreateCustodyLog(tx *gorm.DB, log *entity.CustodyLogs) error
+	ExistsIdempotencyKey(tx *gorm.DB, key string) (bool, error)
 }
 
 type CustodyLogRepository struct {
@@ -61,6 +66,31 @@ func (r *CustodyLogRepository) GetLatestCustodyLog(tx *gorm.DB) (*entity.Custody
 	return &log, nil
 }
 
+func (r *CustodyLogRepository) GetLatestCustodyLogByOrderForUpdate(tx *gorm.DB, orderID uuid.UUID) (*entity.CustodyLogs, error) {
+	var log entity.CustodyLogs
+	err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("order_id = ?", orderID.String()).
+		Order("sequence DESC").
+		First(&log).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &log, nil
+}
+
+func (r *CustodyLogRepository) ListCustodyLogsByOrder(tx *gorm.DB, orderID uuid.UUID) ([]entity.CustodyLogs, error) {
+	var logs []entity.CustodyLogs
+	err := tx.Where("order_id = ?", orderID.String()).
+		Order("sequence ASC").
+		Find(&logs).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return logs, nil
+}
+
 func (r *CustodyLogRepository) CreateCustodyLog(tx *gorm.DB, log *entity.CustodyLogs) error {
 	err := tx.Create(log).Error
 	if err != nil {
@@ -68,6 +98,22 @@ func (r *CustodyLogRepository) CreateCustodyLog(tx *gorm.DB, log *entity.Custody
 	}
 
 	return nil
+}
+
+func (r *CustodyLogRepository) ExistsIdempotencyKey(tx *gorm.DB, key string) (bool, error) {
+	if key == "" {
+		return false, nil
+	}
+
+	var count int64
+	err := tx.Model(&entity.CustodyLogs{}).
+		Where("idempotency_key = ?", key).
+		Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
 }
 
 func normalizeLedgerLimit(limit int) int {

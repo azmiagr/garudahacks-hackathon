@@ -7,6 +7,13 @@ import (
 )
 
 func Migrate(db *gorm.DB) error {
+	if db.Migrator().HasTable(&entity.RegistrationSession{}) &&
+		db.Migrator().HasIndex(&entity.RegistrationSession{}, "idx_registration_sessions_email") {
+		if err := db.Migrator().DropIndex(&entity.RegistrationSession{}, "idx_registration_sessions_email"); err != nil {
+			return err
+		}
+	}
+
 	err := db.AutoMigrate(
 		&entity.Role{},
 		&entity.User{},
@@ -23,6 +30,7 @@ func Migrate(db *gorm.DB) error {
 		&entity.DeliveryVerification{},
 		&entity.Disbursements{},
 		&entity.CustodyLogs{},
+		&entity.CustodyHandshakeToken{},
 		&entity.OrderItems{},
 		&entity.RegistrationSession{},
 		&entity.AdminProfile{},
