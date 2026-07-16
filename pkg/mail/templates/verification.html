@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verifikasi Akun - PijarNusa</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Poppins, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #e4fde1;
+            color: #262626;
+        }
+
+        .wrapper {
+            width: 100%;
+            background-color: #e4fde1;
+            background-image:
+                linear-gradient(135deg, rgba(2, 128, 144, 0.06) 25%, transparent 25%),
+                linear-gradient(225deg, rgba(2, 128, 144, 0.06) 25%, transparent 25%);
+            background-size: 28px 28px;
+            padding: 48px 12px;
+        }
+
+        .main-card {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #feffff;
+            border: 1px solid rgba(38, 38, 38, 0.12);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 18px 36px rgba(38, 38, 38, 0.12);
+        }
+
+        .brand-header {
+            background-color: #028090;
+            padding: 34px 40px 30px;
+            text-align: center;
+        }
+
+        .brand-mark {
+            display: inline-block;
+            width: 44px;
+            height: 44px;
+            line-height: 44px;
+            border-radius: 12px;
+            background-color: #e4fde1;
+            color: #028090;
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 14px;
+        }
+
+        .brand-name {
+            margin: 0;
+            color: #feffff;
+            font-size: 30px;
+            font-weight: 800;
+            letter-spacing: 0;
+        }
+
+        .brand-subtitle {
+            margin: 8px 0 0;
+            color: rgba(254, 255, 255, 0.84);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .content {
+            padding: 40px;
+            text-align: left;
+        }
+
+        .eyebrow {
+            margin: 0 0 12px;
+            color: #028090;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1.4px;
+            text-transform: uppercase;
+        }
+
+        .headline {
+            margin: 0 0 18px;
+            color: #262626;
+            font-size: 24px;
+            font-weight: 800;
+            line-height: 1.3;
+            letter-spacing: 0;
+        }
+
+        .text-body {
+            margin: 0 0 28px;
+            color: rgba(38, 38, 38, 0.72);
+            font-size: 15px;
+            line-height: 1.75;
+        }
+
+        .otp-section {
+            margin: 0 0 30px;
+            padding: 28px 24px;
+            text-align: center;
+            background-color: #e4fde1;
+            border: 1px solid rgba(2, 128, 144, 0.18);
+            border-radius: 12px;
+        }
+
+        .otp-label {
+            display: block;
+            margin-bottom: 12px;
+            color: #028090;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 1.8px;
+            text-transform: uppercase;
+        }
+
+        .otp-code {
+            margin: 0;
+            color: #028090;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 42px;
+            font-weight: 800;
+            letter-spacing: 10px;
+        }
+
+        .btn-container {
+            margin: 24px 0 8px;
+            text-align: center;
+        }
+
+        .btn-primary {
+            display: inline-block;
+            padding: 15px 34px;
+            background-color: #028090;
+            color: #feffff !important;
+            text-decoration: none;
+            border-radius: 999px;
+            font-size: 15px;
+            font-weight: 800;
+            box-shadow: 0 5px 0 #025966;
+        }
+
+        .footer {
+            padding: 30px 40px;
+            background-color: #fbfffb;
+            border-top: 1px solid rgba(38, 38, 38, 0.1);
+            color: rgba(38, 38, 38, 0.68);
+            font-size: 12px;
+            line-height: 1.7;
+        }
+
+        .security-note {
+            color: #dc2626;
+            font-weight: 800;
+        }
+
+        .copyright {
+            margin-top: 24px;
+            padding-top: 18px;
+            border-top: 1px solid rgba(38, 38, 38, 0.1);
+            text-align: center;
+            font-size: 11px;
+            color: rgba(38, 38, 38, 0.58);
+        }
+
+        .brand-link {
+            color: #028090;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        @media screen and (max-width: 480px) {
+            .wrapper {
+                padding: 28px 10px;
+            }
+
+            .brand-header,
+            .content,
+            .footer {
+                padding-left: 24px;
+                padding-right: 24px;
+            }
+
+            .brand-name {
+                font-size: 26px;
+            }
+
+            .headline {
+                font-size: 21px;
+            }
+
+            .otp-code {
+                font-size: 34px;
+                letter-spacing: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <table class="main-card" cellpadding="0" cellspacing="0" role="presentation">
+            <tr>
+                <td class="brand-header">
+                    <div class="brand-mark">P</div>
+                    <h1 class="brand-name">PijarNusa</h1>
+                    <p class="brand-subtitle">Transparansi bantuan bencana, dari donasi sampai barang diterima.</p>
+                </td>
+            </tr>
+            <tr>
+                <td class="content">
+                    <p class="eyebrow">Verifikasi Akun</p>
+                    <h2 class="headline">Satu langkah lagi untuk menyalakan akun Anda</h2>
+
+                    <p class="text-body">
+                        Hai, <strong>{{.Name}}</strong>,<br><br>
+                        Terima kasih sudah bergabung dengan <strong>PijarNusa</strong>. Kami perlu memastikan email ini benar milik Anda agar akun tetap aman dan siap digunakan untuk mendukung penyaluran bantuan yang transparan.
+                        <br><br>
+                        Masukkan kode verifikasi berikut di aplikasi:
+                    </p>
+
+                    <div class="otp-section">
+                        <span class="otp-label">Kode Verifikasi</span>
+                        <h2 class="otp-code">{{.Code}}</h2>
+                    </div>
+
+                    <p class="text-body" style="text-align: center; font-size: 14px; margin-bottom: 0;">
+                        Anda juga bisa menekan tombol di bawah untuk verifikasi langsung.
+                    </p>
+
+                    <div class="btn-container">
+                        <a href="{{.VerificationLink}}" class="btn-primary">Verifikasi Akun</a>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="footer">
+                    <strong>Penting:</strong>
+                    <br>
+                    Kode ini berlaku selama <strong>{{.ExpiryMinutes}} menit</strong>. Jangan bagikan kode ini kepada siapa pun, termasuk pihak yang mengaku sebagai tim PijarNusa.
+                    <br><br>
+                    <span class="security-note">Catatan keamanan:</span> PijarNusa tidak pernah meminta kata sandi, OTP, PIN, atau informasi rekening melalui pesan tidak resmi.
+
+                    <div class="copyright">
+                        &copy; {{.Year}} <strong>PijarNusa</strong>. Nama aplikasi masih dapat berubah selama pengembangan.<br>
+                        <a href="#" class="brand-link">pijarnusa.id</a>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

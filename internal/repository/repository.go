@@ -6,6 +6,9 @@ import (
 
 type Repository struct {
 	UserRepository                 IUserRepository
+	RoleRepository                 IRoleRepository
+	RegistrationRepository         IRegistrationRepository
+	AdminPoskoProfileRepository    IAdminPoskoProfileRepository
 	PostRepository                 IPostRepository
 	DisasterReportRepository       IDisasterReportRepository
 	DisasterEventRepository        IDisasterEventRepository
@@ -14,6 +17,7 @@ type Repository struct {
 	DonationRepository             IDonationRepository
 	DisbursementRepository         IDisbursementRepository
 	CustodyLogRepository           ICustodyLogRepository
+	OtpRepository                  IOtpRepository
 }
 
 func NewRepository(db *gorm.DB) *Repository {
@@ -27,5 +31,9 @@ func NewRepository(db *gorm.DB) *Repository {
 		DonationRepository:             NewDonationRepository(db),
 		DisbursementRepository:         NewDisbursementRepository(db),
 		CustodyLogRepository:           NewCustodyLogRepository(db),
+		OtpRepository:                  NewOtpRepository(db),
+		RoleRepository:                 NewRoleRepository(db),
+		RegistrationRepository:         NewRegistrationRepository(db),
+		AdminPoskoProfileRepository:    NewAdminPoskoProfileRepository(db),
 	}
 }

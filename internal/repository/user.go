@@ -8,6 +8,7 @@ import (
 
 type IUserRepository interface {
 	GetUser(tx *gorm.DB, param model.GetUserParam) (*entity.User, error)
+	CreateUser(tx *gorm.DB, user *entity.User) error
 }
 
 type UserRepository struct {
@@ -24,4 +25,12 @@ func (r *UserRepository) GetUser(tx *gorm.DB, param model.GetUserParam) (*entity
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (r *UserRepository) CreateUser(tx *gorm.DB, user *entity.User) error {
+	err := tx.Create(user).Error
+	if err != nil {
+		return err
+	}
+	return nil
 }
