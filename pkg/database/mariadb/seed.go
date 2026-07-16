@@ -10,13 +10,59 @@ import (
 )
 
 const (
-	adminRoleName = "admin"
-	adminEmail    = "admin@example.com"
-	adminPassword = "admin123"
+	adminRoleName      = "admin"
+	donorRoleName      = "donor"
+	storeRoleName      = "store"
+	courierRoleName    = "relawan"
+	poskoAdminRoleName = "posko_admin"
+	adminEmail         = "admin@example.com"
+	adminPassword      = "admin123"
 )
 
 func Seed(db *gorm.DB) error {
+	if err := seedRoles(db); err != nil {
+		return err
+	}
+
 	return seedAdmin(db)
+}
+
+func seedRoles(db *gorm.DB) error {
+	roleNames := []string{
+		adminRoleName,
+		donorRoleName,
+		storeRoleName,
+		courierRoleName,
+		poskoAdminRoleName,
+	}
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		for _, roleName := range roleNames {
+			if err := seedRole(tx, roleName); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
+func seedRole(tx *gorm.DB, roleName string) error {
+	var role entity.Role
+	err := tx.Where("role_name = ?", roleName).First(&role).Error
+	if err == nil {
+		return nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+
+	role = entity.Role{
+		RoleID:   uuid.New(),
+		RoleName: roleName,
+	}
+
+	return tx.Create(&role).Error
 }
 
 func seedAdmin(db *gorm.DB) error {
