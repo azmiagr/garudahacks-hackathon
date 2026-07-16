@@ -1,12 +1,15 @@
 package repository
 
 import (
+	"github.com/azmiagr/garudahacks-hackathon/entity"
 	"github.com/azmiagr/garudahacks-hackathon/model"
 	"gorm.io/gorm"
 )
 
 type ICustodyLogRepository interface {
 	GetLatestPublicLedger(tx *gorm.DB, year int, limit int) ([]model.PublicLedgerRow, error)
+	GetLatestCustodyLog(tx *gorm.DB) (*entity.CustodyLogs, error)
+	CreateCustodyLog(tx *gorm.DB, log *entity.CustodyLogs) error
 }
 
 type CustodyLogRepository struct {
@@ -47,6 +50,24 @@ func (r *CustodyLogRepository) GetLatestPublicLedger(tx *gorm.DB, year int, limi
 	}
 
 	return rows, nil
+}
+
+func (r *CustodyLogRepository) GetLatestCustodyLog(tx *gorm.DB) (*entity.CustodyLogs, error) {
+	var log entity.CustodyLogs
+	err := tx.Order("sequence DESC").First(&log).Error
+	if err != nil {
+		return nil, err
+	}
+	return &log, nil
+}
+
+func (r *CustodyLogRepository) CreateCustodyLog(tx *gorm.DB, log *entity.CustodyLogs) error {
+	err := tx.Create(log).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func normalizeLedgerLimit(limit int) int {

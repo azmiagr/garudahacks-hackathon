@@ -21,6 +21,11 @@ type Repository struct {
 	DisbursementRepository         IDisbursementRepository
 	CustodyLogRepository           ICustodyLogRepository
 	OtpRepository                  IOtpRepository
+	WalletRepository               IWalletRepository
+	WalletTransactionRepository    IWalletTransactionRepository
+	PaymentTransactionRepository   IPaymentTransactionRepository
+	OrderRepository                IOrderRepository
+	OrderItemRepository            IOrderItemRepository
 }
 
 func NewRepository(db *gorm.DB) *Repository {
@@ -41,5 +46,10 @@ func NewRepository(db *gorm.DB) *Repository {
 		DisbursementRepository:         NewDisbursementRepository(db),
 		CustodyLogRepository:           NewCustodyLogRepository(db),
 		OtpRepository:                  NewOtpRepository(db),
+		WalletRepository:               NewWalletRepository(db),
+		WalletTransactionRepository:    NewWalletTransactionRepository(db),
+		PaymentTransactionRepository:   NewPaymentTransactionRepository(db),
+		OrderRepository:                NewOrderRepository(db),
+		OrderItemRepository:            NewOrderItemRepository(db),
 	}
 }

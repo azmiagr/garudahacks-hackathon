@@ -36,7 +36,8 @@ func main() {
 	bcrypt := bcrypt.Init()
 	jwt := jwt.Init()
 	supabase := supabase.Init()
-	svc := service.NewService(repo, bcrypt, jwt, supabase)
+	midtransConfig := config.LoadMidtransConfig()
+	svc := service.NewService(repo, bcrypt, jwt, supabase, midtransConfig)
 
 	middleware := middleware.Init(svc, jwt)
 	r := rest.NewRest(svc, middleware)

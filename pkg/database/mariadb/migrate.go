@@ -27,6 +27,7 @@ func Migrate(db *gorm.DB) error {
 		&entity.RegistrationSession{},
 		&entity.AdminProfile{},
 		&entity.DonorProfile{},
+		&entity.PaymentTransactions{},
 	)
 
 	if err != nil {

@@ -15,4 +15,6 @@ type Donations struct {
 	DonationStatus      string    `json:"donation_status" gorm:"type:enum('pending','approved','rejected');default:'pending'"`
 	DonatedAt           time.Time `json:"donated_at" gorm:"autoCreateTime"`
 	UpdatedAt           time.Time `json:"updated_at" gorm:"autoUpdateTime"`
+
+	PaymentTransactions []PaymentTransactions `json:"payment_transactions" gorm:"foreignKey:DonationID;references:DonationID;constraint:onDelete:CASCADE"`
 }
