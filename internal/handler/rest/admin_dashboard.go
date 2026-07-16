@@ -3,21 +3,14 @@ package rest
 import (
 	"net/http"
 
-	"github.com/azmiagr/garudahacks-hackathon/entity"
+	"github.com/azmiagr/garudahacks-hackathon/pkg/helper"
 	"github.com/azmiagr/garudahacks-hackathon/pkg/response"
 	"github.com/gin-gonic/gin"
 )
 
 func (r *Rest) GetAdminDashboardHome(c *gin.Context) {
-	userValue, exists := c.Get("user")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "failed to get user login", nil)
-		return
-	}
-
-	user, ok := userValue.(*entity.User)
+	user, ok := helper.GetLoginUserFromContext(c)
 	if !ok {
-		response.Error(c, http.StatusUnauthorized, "invalid user login", nil)
 		return
 	}
 

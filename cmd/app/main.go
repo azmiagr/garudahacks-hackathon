@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/azmiagr/garudahacks-hackathon/internal/handler/rest"
 	"github.com/azmiagr/garudahacks-hackathon/internal/repository"
 	"github.com/azmiagr/garudahacks-hackathon/internal/service"
@@ -9,7 +11,7 @@ import (
 	"github.com/azmiagr/garudahacks-hackathon/pkg/database/mariadb"
 	"github.com/azmiagr/garudahacks-hackathon/pkg/jwt"
 	"github.com/azmiagr/garudahacks-hackathon/pkg/middleware"
-	"log"
+	"github.com/azmiagr/garudahacks-hackathon/pkg/supabase"
 )
 
 func main() {
@@ -33,7 +35,8 @@ func main() {
 	repo := repository.NewRepository(db)
 	bcrypt := bcrypt.Init()
 	jwt := jwt.Init()
-	svc := service.NewService(repo, bcrypt, jwt)
+	supabase := supabase.Init()
+	svc := service.NewService(repo, bcrypt, jwt, supabase)
 
 	middleware := middleware.Init(svc, jwt)
 	r := rest.NewRest(svc, middleware)

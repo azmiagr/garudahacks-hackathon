@@ -1,12 +1,14 @@
 package repository
 
 import (
+	"github.com/azmiagr/garudahacks-hackathon/entity"
 	"github.com/azmiagr/garudahacks-hackathon/model"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type IRequestRepository interface {
+	CreateRequest(tx *gorm.DB, request *entity.Requests) error
+	GetRequest(tx *gorm.DB, param model.GetRequestParam) (*entity.Requests, error)
 	GetFundingSummaryByReportIDs(tx *gorm.DB, param model.RequestFundingSummaryParam) ([]model.RequestFundingSummaryRow, error)
 	GetAllocationByDisaster(tx *gorm.DB, year int) ([]model.DisasterAllocationRow, error)
 }
@@ -17,6 +19,25 @@ type RequestRepository struct {
 
 func NewRequestRepository(db *gorm.DB) IRequestRepository {
 	return &RequestRepository{db: db}
+}
+
+func (r *RequestRepository) CreateRequest(tx *gorm.DB, request *entity.Requests) error {
+	err := tx.Create(request).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *RequestRepository) GetRequest(tx *gorm.DB, param model.GetRequestParam) (*entity.Requests, error) {
+	var request entity.Requests
+	err := tx.Where(&param).First(&request).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &request, nil
 }
 
 func (r *RequestRepository) GetFundingSummaryByReportIDs(tx *gorm.DB, param model.RequestFundingSummaryParam) ([]model.RequestFundingSummaryRow, error) {
@@ -69,14 +90,4 @@ func (r *RequestRepository) GetAllocationByDisaster(tx *gorm.DB, year int) ([]mo
 	}
 
 	return rows, nil
-}
-
-func UUIDsFromReports(reports []model.LatestDisasterReportRow) []uuid.UUID {
-	ids := make([]uuid.UUID, 0, len(reports))
-
-	for _, report := range reports {
-		ids = append(ids, report.ReportID)
-	}
-
-	return ids
 }

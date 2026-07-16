@@ -1,4 +1,4 @@
-# PijarNusa
+# ArusKita
 
 **Platform Ekosistem Logistik Kebencanaan Terpadu** — a Go REST API backend for a disaster-relief logistics platform built for GarudaHacks 7.0. It connects five actors (Admin Posko, Donatur, Toko Mitra, Relawan Kurir, and Penyintas) in a closed, auditable loop from incoming donations to verified delivery, using real-time geospatial mapping, autonomous order matching, and a QR/PIN-based chain of custody. See [docs/PRD.md](docs/PRD.md) for the full product requirements document.
 

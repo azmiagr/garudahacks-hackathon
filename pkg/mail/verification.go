@@ -12,7 +12,7 @@ func SendVerificationEmail(to, email, otpCode, verificationLink string) error {
 		return fmt.Errorf("failed to render template: %w", err)
 	}
 
-	subject := "Verifikasi Akun - PijarNusa"
+	subject := "Verifikasi Akun - ArusKita"
 	return SendEmail(to, subject, htmlBody)
 
 }
