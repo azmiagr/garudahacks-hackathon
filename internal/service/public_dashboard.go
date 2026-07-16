@@ -313,6 +313,7 @@ func (s *PublicDashboardService) buildDashboardItems(param model.PublicDashboard
 			Longitude:         post.Longitude,
 			DisasterEvent:     eventNameByID[report.EventID],
 			LatestReportTitle: report.ReportTitle,
+			ImageURL:          report.ImageURL,
 			FundingTarget:     funding.FundingTarget,
 			FundedAmount:      funding.FundedAmount,
 			FundingPercentage: percentage,

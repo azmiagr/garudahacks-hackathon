@@ -35,17 +35,30 @@ func (r *Rest) MountEndpoint() {
 
 	auth := baseURL.Group("/auth")
 	auth.POST("/login", r.Login)
+	authRegister := auth.Group("/register")
+	authRegister.POST("/request-otp", r.RequestRegisterOtp)
+	authRegister.POST("/verify-otp", r.VerifyAdminRegisterOtp)
+	authRegister.POST("/password", r.SetAdminRegisterPassword)
+
 	adminRegister := auth.Group("/register/admin")
 	adminRegister.POST("/request-otp", r.RequestAdminRegisterOtp)
 	adminRegister.POST("/verify-otp", r.VerifyAdminRegisterOtp)
 	adminRegister.POST("/password", r.SetAdminRegisterPassword)
 	adminRegister.POST("/profile", r.CompleteAdminRegister)
 
+	donorRegister := auth.Group("/register/donor")
+	donorRegister.POST("/profile", r.CompleteDonorRegister)
+
 	admin := baseURL.Group("/admin")
 	admin.Use(r.middleware.AuthenticateUser, r.middleware.OnlyAdmin())
 	admin.GET("/dashboard", r.GetAdminDashboardHome)
 	admin.GET("/profile", r.GetAdminProfile)
 	admin.POST("/events", r.CreateAdminEvent)
+
+	donor := baseURL.Group("/donor")
+	donor.Use(r.middleware.AuthenticateUser, r.middleware.OnlyDonor())
+	donor.GET("/dashboard/map", r.GetDonorDashboardMap)
+	donor.GET("/dashboard/posts/:post_id", r.GetDonorPostDetail)
 
 }
 

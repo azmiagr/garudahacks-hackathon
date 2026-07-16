@@ -33,6 +33,7 @@ type LatestDisasterReportRow struct {
 	PostID      uuid.UUID `json:"post_id"`
 	EventID     uuid.UUID `json:"event_id"`
 	ReportTitle string    `json:"report_title"`
+	ImageURL    string    `json:"image_url"`
 	ReportedAt  time.Time `json:"reported_at"`
 	CreatedAt   time.Time `json:"created_at"`
 }
@@ -76,6 +77,7 @@ type PublicDashboardMapItem struct {
 	Longitude         float64   `json:"longitude"`
 	DisasterEvent     string    `json:"disaster_event"`
 	LatestReportTitle string    `json:"latest_report_title"`
+	ImageURL          string    `json:"image_url"`
 	FundingTarget     float64   `json:"funding_target"`
 	FundedAmount      float64   `json:"funded_amount"`
 	FundingPercentage int       `json:"funding_percentage"`
