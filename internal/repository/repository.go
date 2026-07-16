@@ -26,6 +26,7 @@ type Repository struct {
 	PaymentTransactionRepository   IPaymentTransactionRepository
 	OrderRepository                IOrderRepository
 	OrderItemRepository            IOrderItemRepository
+	PointRepository                IPointRepository
 }
 
 func NewRepository(db *gorm.DB) *Repository {
@@ -51,5 +52,6 @@ func NewRepository(db *gorm.DB) *Repository {
 		PaymentTransactionRepository:   NewPaymentTransactionRepository(db),
 		OrderRepository:                NewOrderRepository(db),
 		OrderItemRepository:            NewOrderItemRepository(db),
+		PointRepository:                NewPointRepository(db),
 	}
 }

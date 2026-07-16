@@ -19,10 +19,12 @@ type Service struct {
 	DonorDashboardService   IDonorDashboardService
 	DonationPaymentService  IDonationPaymentService
 	DonorTransactionService IDonorTransactionService
+	PointService            IPointService
 }
 
 func NewService(repository *repository.Repository, bcrypt bcrypt.Interface, jwtAuth jwt.Interface, supabase supabase.Interface, midtransConfig *config.MidtransConfig) *Service {
 	publicDashboardService := NewPublicDashboardService(repository.PostRepository, repository.DisasterReportRepository, repository.DisasterEventRepository, repository.RequestRepository, repository.DeliveryVerificationRepository, repository.DonationRepository, repository.DisbursementRepository, repository.CustodyLogRepository)
+	pointService := NewPointService(repository.PointRepository)
 
 	return &Service{
 		UserService:             NewUserService(repository.UserRepository, repository.RoleRepository),
@@ -34,6 +36,7 @@ func NewService(repository *repository.Repository, bcrypt bcrypt.Interface, jwtA
 		AdminProfileService:     NewAdminProfileService(repository.RoleRepository, repository.AdminPoskoProfileRepository),
 		DonorDashboardService:   NewDonorDashboardService(repository.PostRepository, repository.ItemRepository, publicDashboardService),
 		DonorTransactionService: NewDonorTransactionService(repository.DonationRepository),
+		PointService:            pointService,
 		DonationPaymentService: NewDonationPaymentService(
 			repository.RequestRepository,
 			repository.ItemRepository,
@@ -44,6 +47,7 @@ func NewService(repository *repository.Repository, bcrypt bcrypt.Interface, jwtA
 			repository.OrderRepository,
 			repository.OrderItemRepository,
 			repository.CustodyLogRepository,
+			pointService,
 			midtransConfig,
 		),
 	}

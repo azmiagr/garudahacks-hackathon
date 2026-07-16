@@ -65,6 +65,10 @@ func (r *Rest) MountEndpoint() {
 	donor.GET("/donations/transactions", r.GetDonorDonationTransactions)
 	donor.GET("/donations/transactions/:donation_id", r.GetDonorDonationTransactionDetail)
 	donor.POST("/donations/payments", r.CreateDonationPayment)
+	donor.GET("/points", r.GetPointDashboard)
+	donor.GET("/points/history", r.GetPointHistory)
+	donor.GET("/points/rewards", r.GetRewards)
+	donor.POST("/points/rewards/claim", r.ClaimReward)
 
 }
 

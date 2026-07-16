@@ -17,4 +17,5 @@ type Donations struct {
 	UpdatedAt           time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 
 	PaymentTransactions []PaymentTransactions `json:"payment_transactions" gorm:"foreignKey:DonationID;references:DonationID;constraint:onDelete:CASCADE"`
+	PointTransactions   []PointTransaction    `json:"point_transactions" gorm:"foreignKey:DonationID;references:DonationID;constraint:onDelete:SET NULL"`
 }
