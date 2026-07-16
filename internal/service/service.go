@@ -9,11 +9,15 @@ import (
 type Service struct {
 	UserService            IUserService
 	PublicDashboardService IPublicDashboardService
+	OtpService             IOtpService
+	AuthService            IAuthService
 }
 
 func NewService(repository *repository.Repository, bcrypt bcrypt.Interface, jwtAuth jwt.Interface) *Service {
 	return &Service{
 		UserService:            NewUserService(repository.UserRepository),
 		PublicDashboardService: NewPublicDashboardService(repository.PostRepository, repository.DisasterReportRepository, repository.DisasterEventRepository, repository.RequestRepository, repository.DeliveryVerificationRepository, repository.DonationRepository, repository.DisbursementRepository, repository.CustodyLogRepository),
+		OtpService:             NewOtpService(repository.OtpRepository, repository.UserRepository),
+		AuthService:            NewAuthService(repository.UserRepository, repository.RoleRepository, repository.RegistrationRepository, repository.AdminPoskoProfileRepository, bcrypt, jwtAuth),
 	}
 }

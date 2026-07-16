@@ -10,13 +10,12 @@ import (
 )
 
 const (
-	adminRoleName      = "admin"
-	donorRoleName      = "donor"
-	storeRoleName      = "store"
-	courierRoleName    = "relawan"
-	poskoAdminRoleName = "posko_admin"
-	adminEmail         = "admin@example.com"
-	adminPassword      = "admin123"
+	adminRoleName   = "admin"
+	donorRoleName   = "donor"
+	storeRoleName   = "store"
+	courierRoleName = "relawan"
+	adminEmail      = "admin@example.com"
+	adminPassword   = "admin123"
 )
 
 func Seed(db *gorm.DB) error {
@@ -33,7 +32,6 @@ func seedRoles(db *gorm.DB) error {
 		donorRoleName,
 		storeRoleName,
 		courierRoleName,
-		poskoAdminRoleName,
 	}
 
 	return db.Transaction(func(tx *gorm.DB) error {
