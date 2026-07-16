@@ -76,11 +76,14 @@ func (r *Rest) MountEndpoint() {
 
 	store := baseURL.Group("/store")
 	store.Use(r.middleware.AuthenticateUser, r.middleware.OnlyStore())
+	store.GET("/profile", r.GetStoreProfile)
 	store.GET("/orders", r.GetStoreOrders)
 	store.GET("/orders/:order_id", r.GetStoreOrderDetail)
 	store.POST("/orders/:order_id/accept", r.AcceptStoreOrder)
 	store.POST("/orders/:order_id/ready", r.MarkStoreOrderReady)
 	store.POST("/orders/:order_id/handoff-token", r.GenerateStoreHandoffToken)
+	store.GET("/disbursements/dashboard", r.GetStoreDisbursementDashboard)
+	store.GET("/goodness", r.GetStoreGoodness)
 
 	courier := baseURL.Group("/courier")
 	courier.Use(r.middleware.AuthenticateUser, r.middleware.OnlyCourier())
