@@ -62,6 +62,8 @@ func (r *Rest) MountEndpoint() {
 	donor.Use(r.middleware.AuthenticateUser, r.middleware.OnlyDonor())
 	donor.GET("/dashboard/map", r.GetDonorDashboardMap)
 	donor.GET("/dashboard/posts/:post_id", r.GetDonorPostDetail)
+	donor.GET("/donations/transactions", r.GetDonorDonationTransactions)
+	donor.GET("/donations/transactions/:donation_id", r.GetDonorDonationTransactionDetail)
 	donor.POST("/donations/payments", r.CreateDonationPayment)
 
 }
