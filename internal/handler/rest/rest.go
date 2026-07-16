@@ -60,6 +60,7 @@ func (r *Rest) MountEndpoint() {
 
 	donor := baseURL.Group("/donor")
 	donor.Use(r.middleware.AuthenticateUser, r.middleware.OnlyDonor())
+	donor.GET("/profile", r.GetDonorProfile)
 	donor.GET("/dashboard/map", r.GetDonorDashboardMap)
 	donor.GET("/dashboard/posts/:post_id", r.GetDonorPostDetail)
 	donor.GET("/donations/transactions", r.GetDonorDonationTransactions)

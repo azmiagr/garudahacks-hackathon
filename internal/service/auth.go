@@ -14,6 +14,7 @@ import (
 	appbcrypt "github.com/azmiagr/garudahacks-hackathon/pkg/bcrypt"
 	"github.com/azmiagr/garudahacks-hackathon/pkg/database/mariadb"
 	apperrors "github.com/azmiagr/garudahacks-hackathon/pkg/errors"
+	"github.com/azmiagr/garudahacks-hackathon/pkg/hash"
 	"github.com/azmiagr/garudahacks-hackathon/pkg/jwt"
 	"github.com/azmiagr/garudahacks-hackathon/pkg/mail"
 	"github.com/google/uuid"
@@ -48,6 +49,7 @@ type AuthService struct {
 	donorProfileRepository      repository.IDonorProfileRepository
 	bcrypt                      appbcrypt.Interface
 	jwtAuth                     jwt.Interface
+	hasher                      hash.Interface
 }
 
 func NewAuthService(
@@ -58,6 +60,7 @@ func NewAuthService(
 	donorProfileRepository repository.IDonorProfileRepository,
 	bcrypt appbcrypt.Interface,
 	jwtAuth jwt.Interface,
+	hasher hash.Interface,
 ) IAuthService {
 	return &AuthService{
 		db:                          mariadb.Connection,
@@ -68,6 +71,7 @@ func NewAuthService(
 		donorProfileRepository:      donorProfileRepository,
 		bcrypt:                      bcrypt,
 		jwtAuth:                     jwtAuth,
+		hasher:                      hasher,
 	}
 }
 
@@ -320,6 +324,8 @@ func (s *AuthService) CompleteAdminRegister(req model.CompleteAdminRegisterReque
 		return nil, err
 	}
 
+	hashedNIK := s.hasher.HashNIK(req.NIK)
+
 	existingUser, err := s.userRepository.GetUser(tx, model.GetUserParam{
 		Email: session.Email,
 	})
@@ -331,7 +337,7 @@ func (s *AuthService) CompleteAdminRegister(req model.CompleteAdminRegisterReque
 	}
 
 	existingProfile, err := s.adminPoskoProfileRepository.GetAdminPoskoProfile(tx, model.GetAdminPoskoProfileParam{
-		NIK: req.NIK,
+		NIK: hashedNIK,
 	})
 	if err == nil && existingProfile != nil {
 		return nil, apperrors.Conflict("nik already registered")
@@ -368,7 +374,7 @@ func (s *AuthService) CompleteAdminRegister(req model.CompleteAdminRegisterReque
 	profile := &entity.AdminProfile{
 		ProfileID:   uuid.New(),
 		UserID:      user.UserID,
-		NIK:         req.NIK,
+		NIK:         hashedNIK,
 		Affiliation: strings.TrimSpace(req.Affiliation),
 	}
 

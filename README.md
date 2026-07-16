@@ -24,8 +24,10 @@ The backend follows a simple 3-layer architecture (handler → service → repos
 The data model captures the full donation-to-delivery lifecycle described in the PRD (see `entity/`):
 
 - **Users & Roles** — `User`, `Role`. Roles are seeded on startup (see [pkg/database/mariadb/seed.go](pkg/database/mariadb/seed.go)): `admin`, `donor`, `store`, and `relawan` (courier).
+- **Profiles & Onboarding** — `AdminProfile` (NIK, affiliation), `DonorProfile` (phone number, preferences, consent), `RegistrationSession` (email/OTP-based signup flow for both admin and donor), `OtpCode`.
 - **Posts & Disasters** — `Post` (posko/disaster site, with geofence radius), `DisasterEvent`, `DisasterReport` (field reports tied to a post/event).
-- **Funding** — `Requests` (logistics needs with funding target/funded/reserved amounts), `Items` (structured needs list), `Wallets`, `WalletTransactions`, `Donations`.
+- **Funding** — `Requests` (logistics needs with funding target/funded/reserved amounts), `Items` (structured needs list), `Wallets`, `WalletTransactions`, `Donations`, `PaymentTransactions` (Midtrans charge/notification records: QR/VA details, status, raw payloads).
+- **Rewards & Gamification** — `PointAccount` (active/earned/redeemed totals per donor), `PointTransaction` (earn/redeem/adjustment ledger), `Reward`, `RewardClaim` (redemption of points for pulsa/voucher/donation rewards).
 - **Fulfillment** — `Stores` (Toko Mitra), `Orders`, `OrderItems`, `CustodyLogs` (hashed chain-of-custody handshakes), `DeliveryVerification` (forced-camera proof with GPS), `Disbursements` (payouts to stores).
 
 Run `mariadb.Migrate` auto-migrates all of the above; `mariadb.Seed` seeds the four system roles and a default admin account.
@@ -42,28 +44,46 @@ project-root/
 ├── docs/
 │   └── PRD.md                    # Product requirements document
 ├── entity/                       # GORM models (mapped to database tables)
-│   ├── user.go, role.go
+│   ├── user.go, role.go, otp.go, registration_session.go
+│   ├── admin_profile.go, donor_profile.go
 │   ├── post.go, disaster_events.go, disaster_report.go
 │   ├── requests.go, items.go, wallets.go, wallet_transactions.go, donations.go
+│   ├── payment_transaction.go, point.go
 │   ├── stores.go, orders.go, order_items.go
 │   ├── custody_logs.go, delivery_verifications.go, disbursements.go
 ├── internal/                     # Core application code (3-layer architecture)
 │   ├── handler/
 │   │   └── rest/
-│   │       ├── rest.go            # HTTP layer: route registration, server bootstrap
+│   │       ├── rest.go             # HTTP layer: route registration, server bootstrap
+│   │       ├── auth.go             # Login, admin/donor registration + OTP flow
+│   │       ├── admin_profile.go, admin_dashboard.go, admin_event.go
+│   │       ├── donor_profile.go, donor_dashboard.go, donor_transaction.go
+│   │       ├── donation_payment.go # Donation checkout (Midtrans) + webhook
+│   │       ├── point.go            # Point dashboard, history, rewards, claims
 │   │       └── public_dashboard.go # Public dashboard endpoints
 │   ├── repository/                # Data access layer: database operations via GORM
 │   │   ├── repository.go          # Aggregates all repositories
-│   │   ├── user.go, post.go, disaster_event.go, disaster_report.go
-│   │   ├── request.go, donation.go, disbursement.go
+│   │   ├── user.go, role.go, registration.go, otp.go
+│   │   ├── post.go, disaster_event.go, disaster_report.go
+│   │   ├── request.go, item.go, donation.go, wallet.go, wallet_transaction.go
+│   │   ├── payment_transaction.go, point.go
+│   │   ├── admin_profile.go, admin_dashboard.go, donor_profile.go
+│   │   ├── order.go, order_item.go, disbursement.go
 │   │   ├── delivery_verification.go, custody_log.go
 │   └── service/                   # Business logic layer
 │       ├── service.go             # Aggregates all services
-│       ├── user.go
-│       └── public_dashboard.go    # Public transparency/map/summary aggregation
-├── model/
-│   ├── user.go
-│   └── public_dashboard.go        # DTOs for public dashboard request/response
+│       ├── auth.go, otp.go, user.go
+│       ├── admin_profile.go, admin_dashboard.go, admin_event.go
+│       ├── donor_profile.go, donor_dashboard.go, donor_transaction.go
+│       ├── donation_payment.go     # Midtrans integration (charge + webhook handling)
+│       ├── point.go                # Point accrual, history, rewards, claims
+│       └── public_dashboard.go     # Public transparency/map/summary aggregation
+├── model/                        # Request/response DTOs, one file per domain area
+│   ├── auth.go, otp.go, user.go
+│   ├── admin_profile.go, admin_dashboard.go, admin_event.go
+│   ├── donor_profile.go, donor_dashboard.go, donor_transaction.go
+│   ├── donation_payment.go, payment.go, point.go
+│   └── public_dashboard.go
 ├── pkg/                           # Shared utilities
 │   ├── bcrypt/
 │   │   └── bcrypt.go              # Password hashing (bcrypt, cost=10)
@@ -131,10 +151,10 @@ HTTP Request
 ### Layer Responsibilities
 
 **`internal/repository/`**
-Owns all direct database interaction. Each method corresponds to a specific query or mutation. Receives a `*gorm.DB` instance and is the only layer allowed to call GORM methods. Aggregated in `repository.go` as `Repository` (currently: `UserRepository`, `PostRepository`, `DisasterReportRepository`, `DisasterEventRepository`, `RequestRepository`, `DeliveryVerificationRepository`, `DonationRepository`, `DisbursementRepository`, `CustodyLogRepository`).
+Owns all direct database interaction. Each method corresponds to a specific query or mutation. Receives a `*gorm.DB` instance and is the only layer allowed to call GORM methods. Aggregated in `repository.go` as `Repository` (currently: `UserRepository`, `RoleRepository`, `RegistrationRepository`, `OtpRepository`, `PostRepository`, `DisasterReportRepository`, `DisasterEventRepository`, `RequestRepository`, `ItemRepository`, `WalletRepository`, `WalletTransactionRepository`, `DonationRepository`, `PaymentTransactionRepository`, `PointRepository`, `AdminPoskoProfileRepository`, `AdminDashboardRepository`, `DonorProfileRepository`, `OrderRepository`, `OrderItemRepository`, `DisbursementRepository`, `DeliveryVerificationRepository`, `CustodyLogRepository`).
 
 **`internal/service/`**
-Contains business logic. Depends on the repository for data access and on `pkg/bcrypt`, `pkg/jwt`, and `pkg/mail` for cross-cutting concerns. Never imports GORM directly. Aggregated in `service.go` as `Service` (currently: `UserService`, `PublicDashboardService`).
+Contains business logic. Depends on the repository for data access and on `pkg/bcrypt`, `pkg/jwt`, and `pkg/mail` for cross-cutting concerns. Never imports GORM directly. Aggregated in `service.go` as `Service` (currently: `UserService`, `AuthService`, `OtpService`, `AdminProfileService`, `AdminDashboardService`, `AdminEventService`, `DonorProfileService`, `DonorDashboardService`, `DonorTransactionService`, `DonationPaymentService` (Midtrans), `PointService`, `PublicDashboardService`).
 
 **`internal/handler/rest/`**
 The outermost layer. Binds HTTP routes via Gin, parses request bodies, calls the service, and writes back JSON responses using the shared `pkg/response` formatter.
@@ -145,14 +165,54 @@ The outermost layer. Binds HTTP routes via Gin, parses request bodies, calls the
 
 All routes are namespaced under `/api/v1`. Currently implemented:
 
+### Public
+
 | Method | Path                       | Description                                                                                |
 | ------ | -------------------------- | ------------------------------------------------------------------------------------------ |
 | GET    | `/dashboard/summary`       | Aggregated funding summary per posko (target/funded/urgency)                               |
 | GET    | `/dashboard/map`           | Posko locations + funding status for the interactive disaster map                          |
 | GET    | `/dashboard/distributions` | Verified delivery proofs (photo, GPS, custody hash) per order                              |
 | GET    | `/dashboard/transparency`  | Public transparency page: totals, monthly disbursements, ledger, verified fulfillment rate |
+| POST   | `/payments/webhook`        | Midtrans payment notification webhook (updates donation/payment/point status)              |
 
-Authentication (JWT + bcrypt), email verification (`pkg/mail`), and CORS/auth middleware are already wired in `cmd/app/main.go`, ready for additional route groups (donation, order matching, custody, disbursement, etc.) to be layered in as those modules are built out per the PRD roadmap.
+### Auth & Registration
+
+| Method | Path                             | Description                                                     |
+| ------ | -------------------------------- | ----------------------------------------------------------------|
+| POST   | `/auth/login`                    | Login with email/password, returns JWT                          |
+| POST   | `/auth/register/request-otp`     | Start registration, send OTP to email                           |
+| POST   | `/auth/register/verify-otp`      | Verify OTP for a pending registration session                   |
+| POST   | `/auth/register/password`        | Set password for a verified registration session                |
+| POST   | `/auth/register/admin/request-otp` | Start admin registration, send OTP to email                   |
+| POST   | `/auth/register/admin/verify-otp`  | Verify OTP for a pending admin registration                    |
+| POST   | `/auth/register/admin/password`    | Set password for a verified admin registration                 |
+| POST   | `/auth/register/admin/profile`     | Complete admin registration (NIK, affiliation, posko details)   |
+| POST   | `/auth/register/donor/profile`     | Complete donor registration (phone number, preferences)         |
+
+### Admin (JWT + `admin` role required)
+
+| Method | Path              | Description                                                |
+| ------ | ----------------- | ----------------------------------------------------------- |
+| GET    | `/admin/dashboard`| Admin home dashboard: metrics/summary for the admin's posko  |
+| GET    | `/admin/profile`  | Admin profile (NIK, affiliation, aggregated report metrics)  |
+| POST   | `/admin/events`   | Create a disaster event/report tied to the admin's posko     |
+
+### Donor (JWT + `donor` role required)
+
+| Method | Path                                          | Description                                                        |
+| ------ | --------------------------------------------- | ------------------------------------------------------------------- |
+| GET    | `/donor/profile`                              | Donor profile: verification status, level, lifetime donation stats  |
+| GET    | `/donor/dashboard/map`                        | Posko map view scoped to the donor experience                       |
+| GET    | `/donor/dashboard/posts/:post_id`             | Detail of a single posko/request for donors                         |
+| GET    | `/donor/donations/transactions`               | Donor's donation transaction history                                |
+| GET    | `/donor/donations/transactions/:donation_id`  | Detail of a single donation transaction                             |
+| POST   | `/donor/donations/payments`                   | Create a donation payment (Midtrans charge: QR/VA)                  |
+| GET    | `/donor/points`                               | Donor point dashboard (active/earned/redeemed totals)                |
+| GET    | `/donor/points/history`                       | Point transaction history (earn/redeem/adjustment ledger)           |
+| GET    | `/donor/points/rewards`                       | Browse claimable rewards (pulsa, voucher, donation)                  |
+| POST   | `/donor/points/rewards/claim`                 | Claim a reward using accumulated points                             |
+
+Authentication (JWT + bcrypt), OTP-based email verification (`pkg/mail`), Midtrans payment integration, and CORS/role-based auth middleware are wired in `cmd/app/main.go`. Route groups for order matching, custody handshakes, and disbursement remain to be layered in per the PRD roadmap.
 
 ---
 
