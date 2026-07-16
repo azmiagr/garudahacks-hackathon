@@ -3,6 +3,7 @@ package repository
 import (
 	"github.com/azmiagr/garudahacks-hackathon/entity"
 	"github.com/azmiagr/garudahacks-hackathon/model"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -11,6 +12,7 @@ type IItemRepository interface {
 	CreateItems(tx *gorm.DB, items []entity.Items) error
 	GetItem(tx *gorm.DB, param model.GetItemParam) (*entity.Items, error)
 	GetItemsByRequestID(tx *gorm.DB, param model.GetItemParam) ([]entity.Items, error)
+	GetDonorPostDetailItems(tx *gorm.DB, requestID uuid.UUID) ([]model.DonorPostDetailItemRow, error)
 }
 
 type ItemRepository struct {
@@ -61,4 +63,18 @@ func (r *ItemRepository) GetItemsByRequestID(tx *gorm.DB, param model.GetItemPar
 	}
 
 	return items, nil
+}
+
+func (r *ItemRepository) GetDonorPostDetailItems(tx *gorm.DB, requestID uuid.UUID) ([]model.DonorPostDetailItemRow, error) {
+	var rows []model.DonorPostDetailItemRow
+	err := tx.Table("items").
+		Select("item_id, name, description, price, estimated_total, quantity_needed, quantity_fulfilled").
+		Where("request_id = ?", requestID).
+		Order("created_at ASC").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }

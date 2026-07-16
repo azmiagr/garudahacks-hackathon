@@ -18,6 +18,7 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 
 	AdminProfile          AdminProfile           `json:"admin_profile" gorm:"foreignKey:UserID;references:UserID;constraint:onDelete:CASCADE"`
+	DonorProfile          DonorProfile           `json:"donor_profile" gorm:"foreignKey:UserID;references:UserID;constraint:onDelete:CASCADE"`
 	OtpCodes              []OtpCode              `json:"otp_codes" gorm:"foreignKey:UserID;references:UserID;constraint:onDelete:CASCADE"`
 	Posts                 []Post                 `json:"posts" gorm:"foreignKey:UserID;references:UserID;constraint:onDelete:CASCADE"`
 	DisasterReports       []DisasterReport       `json:"disaster_reports" gorm:"-"`

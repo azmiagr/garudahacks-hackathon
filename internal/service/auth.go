@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"regexp"
@@ -22,6 +23,7 @@ import (
 const (
 	adminRoleName              = "admin"
 	adminPoskoDisplayRoleName  = "admin_posko"
+	donorRoleName              = "donor"
 	registerOtpExpiryDuration  = 10 * time.Minute
 	registerSessionDuration    = 30 * time.Minute
 	registerOtpExpiryInSeconds = 600
@@ -29,10 +31,12 @@ const (
 
 type IAuthService interface {
 	Login(req model.LoginRequest) (*model.LoginResponse, error)
+	RequestRegisterOtp(req model.RequestAdminRegisterOtpRequest) (*model.RequestAdminRegisterOtpResponse, error)
 	RequestAdminRegisterOtp(req model.RequestAdminRegisterOtpRequest) (*model.RequestAdminRegisterOtpResponse, error)
 	VerifyAdminRegisterOtp(req model.VerifyAdminRegisterOtpRequest) (*model.VerifyAdminRegisterOtpResponse, error)
 	SetAdminRegisterPassword(req model.SetAdminRegisterPasswordRequest) (*model.SetAdminRegisterPasswordResponse, error)
 	CompleteAdminRegister(req model.CompleteAdminRegisterRequest) (*model.CompleteAdminRegisterResponse, error)
+	CompleteDonorRegister(req model.CompleteDonorRegisterRequest) (*model.CompleteDonorRegisterResponse, error)
 }
 
 type AuthService struct {
@@ -41,6 +45,7 @@ type AuthService struct {
 	roleRepository              repository.IRoleRepository
 	registrationRepository      repository.IRegistrationRepository
 	adminPoskoProfileRepository repository.IAdminPoskoProfileRepository
+	donorProfileRepository      repository.IDonorProfileRepository
 	bcrypt                      appbcrypt.Interface
 	jwtAuth                     jwt.Interface
 }
@@ -50,6 +55,7 @@ func NewAuthService(
 	roleRepository repository.IRoleRepository,
 	registrationRepository repository.IRegistrationRepository,
 	adminPoskoProfileRepository repository.IAdminPoskoProfileRepository,
+	donorProfileRepository repository.IDonorProfileRepository,
 	bcrypt appbcrypt.Interface,
 	jwtAuth jwt.Interface,
 ) IAuthService {
@@ -59,6 +65,7 @@ func NewAuthService(
 		roleRepository:              roleRepository,
 		registrationRepository:      registrationRepository,
 		adminPoskoProfileRepository: adminPoskoProfileRepository,
+		donorProfileRepository:      donorProfileRepository,
 		bcrypt:                      bcrypt,
 		jwtAuth:                     jwtAuth,
 	}
@@ -107,6 +114,14 @@ func (s *AuthService) Login(req model.LoginRequest) (*model.LoginResponse, error
 }
 
 func (s *AuthService) RequestAdminRegisterOtp(req model.RequestAdminRegisterOtpRequest) (*model.RequestAdminRegisterOtpResponse, error) {
+	if strings.TrimSpace(req.Role) == "" {
+		req.Role = adminRoleName
+	}
+
+	return s.RequestRegisterOtp(req)
+}
+
+func (s *AuthService) RequestRegisterOtp(req model.RequestAdminRegisterOtpRequest) (*model.RequestAdminRegisterOtpResponse, error) {
 	tx := s.db.Begin()
 	defer tx.Rollback()
 
@@ -296,6 +311,10 @@ func (s *AuthService) CompleteAdminRegister(req model.CompleteAdminRegisterReque
 		return nil, apperrors.BadRequest("password must be created before completing registration")
 	}
 
+	if session.RoleName != adminRoleName {
+		return nil, apperrors.BadRequest("registration session is not for admin")
+	}
+
 	err = validateNIK(req.NIK)
 	if err != nil {
 		return nil, err
@@ -387,6 +406,143 @@ func (s *AuthService) CompleteAdminRegister(req model.CompleteAdminRegisterReque
 	}, nil
 }
 
+func (s *AuthService) CompleteDonorRegister(req model.CompleteDonorRegisterRequest) (*model.CompleteDonorRegisterResponse, error) {
+	tx := s.db.Begin()
+	defer tx.Rollback()
+
+	session, err := s.registrationRepository.GetRegistrationSession(tx, model.GetRegistrationSessionParam{
+		RegistrationID: req.RegistrationID,
+	})
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.NotFound("registration session not found")
+		}
+		return nil, err
+	}
+
+	if session.ExpiresAt.Before(time.Now().UTC()) {
+		return nil, apperrors.BadRequest("registration session expired")
+	}
+
+	if session.OtpVerifiedAt == nil {
+		return nil, apperrors.BadRequest("otp must be verified before completing registration")
+	}
+
+	if session.PasswordHash == "" {
+		return nil, apperrors.BadRequest("password must be created before completing registration")
+	}
+
+	if session.RoleName != donorRoleName {
+		return nil, apperrors.BadRequest("registration session is not for donor")
+	}
+
+	if strings.TrimSpace(req.FullName) == "" {
+		return nil, apperrors.BadRequest("full name is required")
+	}
+
+	phoneNumber := normalizePhoneNumber(req.PhoneNumber)
+	if phoneNumber == "" {
+		return nil, apperrors.BadRequest("phone number is required")
+	}
+
+	if !req.ConsentAccepted {
+		return nil, apperrors.BadRequest("consent must be accepted")
+	}
+
+	existingUser, err := s.userRepository.GetUser(tx, model.GetUserParam{
+		Email: session.Email,
+	})
+	if err == nil && existingUser != nil {
+		return nil, apperrors.Conflict("email already registered")
+	}
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	existingProfile, err := s.donorProfileRepository.GetDonorProfile(tx, model.GetDonorProfileParam{
+		PhoneNumber: phoneNumber,
+	})
+	if err == nil && existingProfile != nil {
+		return nil, apperrors.Conflict("phone number already registered")
+	}
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	role, err := s.roleRepository.GetRole(tx, model.GetRoleParam{
+		RoleName: donorRoleName,
+	})
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.Wrap(err, http.StatusInternalServerError, "donor role is not seeded")
+		}
+		return nil, err
+	}
+
+	user := &entity.User{
+		UserID:    uuid.New(),
+		RoleID:    role.RoleID,
+		Name:      strings.TrimSpace(req.FullName),
+		Email:     session.Email,
+		Password:  session.PasswordHash,
+		Status:    "active",
+		KYCStatus: "approved",
+	}
+
+	err = s.userRepository.CreateUser(tx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	preferenceJSON, err := json.Marshal(req.DonationPreferences)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now().UTC()
+	profile := &entity.DonorProfile{
+		ProfileID:         uuid.New(),
+		UserID:            user.UserID,
+		PhoneNumber:       phoneNumber,
+		PreferenceJSON:    string(preferenceJSON),
+		ConsentAccepted:   true,
+		ConsentAcceptedAt: now,
+	}
+
+	err = s.donorProfileRepository.CreateDonorProfile(tx, profile)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.registrationRepository.DeleteRegistrationSession(tx, session)
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := s.jwtAuth.CreateJWTToken(user.UserID, role.RoleName)
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Commit().Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.CompleteDonorRegisterResponse{
+		Token: token,
+		User: model.RegisterUserResponse{
+			UserID:      user.UserID,
+			Role:        role.RoleName,
+			DisplayRole: resolveDisplayRole(role.RoleName),
+			Name:        user.Name,
+			Email:       user.Email,
+			Status:      user.Status,
+			KYCStatus:   user.KYCStatus,
+		},
+	}, nil
+}
+
 func validatePassword(password string) error {
 	if len(password) < 8 {
 		return apperrors.BadRequest("password must be at least 8 characters")
@@ -433,7 +589,21 @@ func normalizeRegisterRole(roleName string) (string, error) {
 	switch roleName {
 	case adminRoleName, adminPoskoDisplayRoleName:
 		return adminRoleName, nil
+	case donorRoleName, "donatur":
+		return donorRoleName, nil
+	case "store", "toko_mitra":
+		return "store", nil
+	case "relawan", "courier", "kurir":
+		return "relawan", nil
 	default:
 		return "", apperrors.BadRequest("unsupported registration role")
 	}
+}
+
+func normalizePhoneNumber(phoneNumber string) string {
+	phoneNumber = strings.TrimSpace(phoneNumber)
+	phoneNumber = strings.ReplaceAll(phoneNumber, " ", "")
+	phoneNumber = strings.ReplaceAll(phoneNumber, "-", "")
+
+	return phoneNumber
 }

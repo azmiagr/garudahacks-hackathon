@@ -18,6 +18,12 @@ type GetAdminPoskoProfileParam struct {
 	NIK       string    `json:"nik"`
 }
 
+type GetDonorProfileParam struct {
+	ProfileID   uuid.UUID `json:"profile_id"`
+	UserID      uuid.UUID `json:"user_id"`
+	PhoneNumber string    `json:"phone_number"`
+}
+
 type RequestAdminRegisterOtpRequest struct {
 	Email string `json:"email" binding:"required,email"`
 	Role  string `json:"role"`
@@ -67,6 +73,19 @@ type CompleteAdminRegisterRequest struct {
 }
 
 type CompleteAdminRegisterResponse struct {
+	Token string               `json:"token"`
+	User  RegisterUserResponse `json:"user"`
+}
+
+type CompleteDonorRegisterRequest struct {
+	RegistrationID      uuid.UUID `json:"registration_id" binding:"required"`
+	FullName            string    `json:"full_name" binding:"required"`
+	PhoneNumber         string    `json:"phone_number" binding:"required"`
+	DonationPreferences []string  `json:"donation_preferences"`
+	ConsentAccepted     bool      `json:"consent_accepted" binding:"required"`
+}
+
+type CompleteDonorRegisterResponse struct {
 	Token string               `json:"token"`
 	User  RegisterUserResponse `json:"user"`
 }

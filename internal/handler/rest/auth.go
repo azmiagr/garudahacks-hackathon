@@ -42,6 +42,23 @@ func (r *Rest) RequestAdminRegisterOtp(c *gin.Context) {
 	response.Success(c, http.StatusCreated, "success to request register otp", result)
 }
 
+func (r *Rest) RequestRegisterOtp(c *gin.Context) {
+	var req model.RequestAdminRegisterOtpRequest
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "failed to bind request body", err)
+		return
+	}
+
+	result, err := r.service.AuthService.RequestRegisterOtp(req)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	response.Success(c, http.StatusCreated, "success to request register otp", result)
+}
+
 func (r *Rest) VerifyAdminRegisterOtp(c *gin.Context) {
 	var req model.VerifyAdminRegisterOtpRequest
 	err := c.ShouldBindJSON(&req)
@@ -91,4 +108,21 @@ func (r *Rest) CompleteAdminRegister(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusCreated, "success to complete admin registration", result)
+}
+
+func (r *Rest) CompleteDonorRegister(c *gin.Context) {
+	var req model.CompleteDonorRegisterRequest
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "failed to bind request body", err)
+		return
+	}
+
+	result, err := r.service.AuthService.CompleteDonorRegister(req)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	response.Success(c, http.StatusCreated, "success to complete donor registration", result)
 }

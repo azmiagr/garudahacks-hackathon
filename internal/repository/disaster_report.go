@@ -59,6 +59,7 @@ func (r *DisasterReportRepository) GetLatestByPostIDs(tx *gorm.DB, param model.L
 			dr.post_id,
 			dr.event_id,
 			dr.report_title,
+			COALESCE(dr.image_url, '') AS image_url,
 			dr.reported_at,
 			dr.created_at
 		`).
