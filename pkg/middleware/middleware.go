@@ -9,6 +9,11 @@ import (
 type Interface interface {
 	Cors() gin.HandlerFunc
 	AuthenticateUser(c *gin.Context)
+	OnlyRoles(allowedRoles ...string) gin.HandlerFunc
+	OnlyAdmin() gin.HandlerFunc
+	OnlyDonor() gin.HandlerFunc
+	OnlyStore() gin.HandlerFunc
+	OnlyCourier() gin.HandlerFunc
 }
 
 type middleware struct {

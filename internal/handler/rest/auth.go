@@ -8,6 +8,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func (r *Rest) Login(c *gin.Context) {
+	var req model.LoginRequest
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "failed to bind request body", err)
+		return
+	}
+
+	result, err := r.service.AuthService.Login(req)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	response.Success(c, http.StatusOK, "success to login", result)
+}
+
 func (r *Rest) RequestAdminRegisterOtp(c *gin.Context) {
 	var req model.RequestAdminRegisterOtpRequest
 	err := c.ShouldBindJSON(&req)
