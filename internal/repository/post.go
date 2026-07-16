@@ -10,6 +10,8 @@ import (
 )
 
 type IPostRepository interface {
+	CreatePost(tx *gorm.DB, post *entity.Post) error
+	GetPost(tx *gorm.DB, param model.GetPostParam) (*entity.Post, error)
 	GetPostByIDs(tx *gorm.DB, postIDs []uuid.UUID) ([]*entity.Post, error)
 	GetPublicMapPosts(tx *gorm.DB, param model.PublicMapPostParam) ([]model.PublicMapPostRow, error)
 }
@@ -20,6 +22,25 @@ type PostRepository struct {
 
 func NewPostRepository(db *gorm.DB) IPostRepository {
 	return &PostRepository{db: db}
+}
+
+func (r *PostRepository) CreatePost(tx *gorm.DB, post *entity.Post) error {
+	err := tx.Create(post).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *PostRepository) GetPost(tx *gorm.DB, param model.GetPostParam) (*entity.Post, error) {
+	var post entity.Post
+	err := tx.Where(&param).First(&post).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &post, nil
 }
 
 func (r *PostRepository) GetPostByIDs(tx *gorm.DB, postIDs []uuid.UUID) ([]*entity.Post, error) {

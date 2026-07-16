@@ -111,6 +111,10 @@ func (s *AuthService) RequestAdminRegisterOtp(req model.RequestAdminRegisterOtpR
 	defer tx.Rollback()
 
 	email := strings.ToLower(strings.TrimSpace(req.Email))
+	roleName, err := normalizeRegisterRole(req.Role)
+	if err != nil {
+		return nil, err
+	}
 
 	existingUser, err := s.userRepository.GetUser(tx, model.GetUserParam{
 		Email: email,
@@ -139,7 +143,7 @@ func (s *AuthService) RequestAdminRegisterOtp(req model.RequestAdminRegisterOtpR
 	session := &entity.RegistrationSession{
 		RegistrationID: sessionID,
 		Email:          email,
-		RoleName:       adminRoleName,
+		RoleName:       roleName,
 		OtpCode:        otpCode,
 		OtpExpiresAt:   now.Add(registerOtpExpiryDuration),
 		OtpVerifiedAt:  nil,
@@ -418,4 +422,18 @@ func resolveDisplayRole(roleName string) string {
 	}
 
 	return roleName
+}
+
+func normalizeRegisterRole(roleName string) (string, error) {
+	roleName = strings.ToLower(strings.TrimSpace(roleName))
+	if roleName == "" {
+		return adminRoleName, nil
+	}
+
+	switch roleName {
+	case adminRoleName, adminPoskoDisplayRoleName:
+		return adminRoleName, nil
+	default:
+		return "", apperrors.BadRequest("unsupported registration role")
+	}
 }

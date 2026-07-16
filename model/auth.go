@@ -20,6 +20,7 @@ type GetAdminPoskoProfileParam struct {
 
 type RequestAdminRegisterOtpRequest struct {
 	Email string `json:"email" binding:"required,email"`
+	Role  string `json:"role"`
 }
 
 type LoginRequest struct {

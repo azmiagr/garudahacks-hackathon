@@ -1,13 +1,13 @@
 # PRODUCT REQUIREMENTS DOCUMENT
 
-# PijarNusa
+# ArusKita
 ### Platform Ekosistem Logistik Kebencanaan Terpadu
 
 *Peta Geospasial Real-Time • Order Logistik Otonom • Rantai Kustodi Terverifikasi*
 
 **Versi 1.0 | 16 Juli 2026**
 **Status:** Draft untuk Review — Disusun berdasarkan Konsep Solusi GarudaHack 7.0
-**Disusun oleh:** Tim Produk & Rekayasa PijarNusa
+**Disusun oleh:** Tim Produk & Rekayasa ArusKita
 
 ---
 
@@ -15,7 +15,7 @@
 
 | Versi | Tanggal | Penulis | Ringkasan Perubahan | Status |
 |---|---|---|---|---|
-| 0.1 | 10 Jul 2026 | Tim Hackathon PijarNusa | Draf awal: Konsep solusi, VPC, User Journey, arsitektur teknis dasar | Draft |
+| 0.1 | 10 Jul 2026 | Tim Hackathon ArusKita | Draf awal: Konsep solusi, VPC, User Journey, arsitektur teknis dasar | Draft |
 | 1.0 | 16 Jul 2026 | Tim Produk & Rekayasa | PRD lengkap: persona, functional & non-functional requirements, data model, API, aturan bisnis, edge case, RICE, roadmap | Review |
 
 ### Daftar Distribusi & Persetujuan
@@ -53,7 +53,7 @@
 
 ## 1. Ringkasan Eksekutif
 
-PijarNusa adalah platform ekosistem logistik kebencanaan terpadu yang menghubungkan lima aktor — Admin Posko, Donatur, Toko Mitra, Relawan Kurir, dan Penyintas — dalam satu siklus tertutup yang dapat diaudit sepenuhnya, mulai dari donasi masuk hingga barang diterima di lokasi bencana. Produk ini mengganti model donasi konvensional yang buram dengan tiga pilar inti: visualisasi geospasial real-time untuk memicu empati donatur, mekanisme order logistik otonom bergaya ride-hailing untuk mempercepat pemenuhan kebutuhan, dan rantai kustodi digital (chain of custody) berbasis QR dinamis serta bukti foto wajib untuk menjamin barang benar-benar sampai ke penyintas.
+ArusKita adalah platform ekosistem logistik kebencanaan terpadu yang menghubungkan lima aktor — Admin Posko, Donatur, Toko Mitra, Relawan Kurir, dan Penyintas — dalam satu siklus tertutup yang dapat diaudit sepenuhnya, mulai dari donasi masuk hingga barang diterima di lokasi bencana. Produk ini mengganti model donasi konvensional yang buram dengan tiga pilar inti: visualisasi geospasial real-time untuk memicu empati donatur, mekanisme order logistik otonom bergaya ride-hailing untuk mempercepat pemenuhan kebutuhan, dan rantai kustodi digital (chain of custody) berbasis QR dinamis serta bukti foto wajib untuk menjamin barang benar-benar sampai ke penyintas.
 
 Dokumen ini menyempurnakan konsep solusi awal (hasil GarudaHack 7.0) menjadi PRD yang siap masuk fase pengembangan produksi. Selain merapikan lima modul inti yang sudah dirancang, dokumen ini menambahkan komponen yang sebelumnya belum tercakup namun krusial untuk peluncuran nyata: modul Trust & Safety / backoffice admin, alur dispute resolution dan refund, kebijakan dana mengendap (idle fund), fallback konektivitas rendah di zona bencana, model data lengkap, spesifikasi API, kerangka kepatuhan regulasi (UU PDP, izin penggalangan dana Kemensos, ketentuan Penyelenggara Jasa Pembayaran BI/OJK), serta rencana mitigasi risiko operasional dan reputasi.
 
@@ -197,7 +197,7 @@ Lima persona berikut disusun berdasarkan Value Proposition Canvas pada konsep aw
 
 ### Persona Tambahan — "Admin Trust & Safety Nadia" (peran baru, lihat Bagian 7.10)
 
-Staf internal PijarNusa yang memoderasi laporan kecurangan, memverifikasi KYC Toko Mitra dan Kurir, menangani sengketa, serta memiliki kewenangan membekukan dana atau menonaktifkan akun. Peran ini tidak ada pada konsep awal namun wajib ada sebelum peluncuran publik karena platform menangani dana pihak ketiga secara langsung.
+Staf internal ArusKita yang memoderasi laporan kecurangan, memverifikasi KYC Toko Mitra dan Kurir, menangani sengketa, serta memiliki kewenangan membekukan dana atau menonaktifkan akun. Peran ini tidak ada pada konsep awal namun wajib ada sebelum peluncuran publik karena platform menangani dana pihak ketiga secara langsung.
 
 ---
 
@@ -234,7 +234,7 @@ Staf internal PijarNusa yang memoderasi laporan kecurangan, memverifikasi KYC To
 
 ### 5.4 Di Luar Lingkup (Eksplisit Tidak Dikerjakan)
 
-- PijarNusa tidak menjadi penyedia layanan pengiriman barang komersial (bukan kompetitor logistik reguler); kurir murni berbasis kerelawanan bencana.
+- ArusKita tidak menjadi penyedia layanan pengiriman barang komersial (bukan kompetitor logistik reguler); kurir murni berbasis kerelawanan bencana.
 - Tidak menangani distribusi bantuan tunai langsung ke penyintas (cash transfer) pada fase MVP — hanya barang.
 - Tidak menyediakan asuransi jiwa/kecelakaan untuk relawan kurir pada MVP (dicatat sebagai risiko pada Bagian 12).
 - Tidak melakukan verifikasi lapangan fisik independen atas kondisi bencana — bergantung pada laporan Admin Posko terverifikasi dan pelaporan komunitas (flagging).
@@ -434,7 +434,7 @@ Mengeksekusi pencairan dana fiat ke rekening Toko Mitra secara otomatis melalui 
 
 ### 7.10 Modul Backoffice Trust & Safety (Baru)
 
-Dashboard administratif internal — tidak tercakup pada konsep awal — untuk staf PijarNusa memoderasi platform, memverifikasi KYC, menangani sengketa, dan menjaga integritas dana pihak ketiga. Modul ini wajib ada sebelum peluncuran publik karena platform memegang kepercayaan finansial banyak pihak.
+Dashboard administratif internal — tidak tercakup pada konsep awal — untuk staf ArusKita memoderasi platform, memverifikasi KYC, menangani sengketa, dan menjaga integritas dana pihak ketiga. Modul ini wajib ada sebelum peluncuran publik karena platform memegang kepercayaan finansial banyak pihak.
 
 **User Stories:**
 - Sebagai Admin Trust & Safety, saya ingin antrean terpusat berisi seluruh laporan flag, eskalasi order-matching gagal, dan kasus verifikasi foto ditolak, terurut berdasarkan urgensi.
@@ -714,7 +714,7 @@ Setiap fitur dinilai dengan formula RICE = (Reach × Impact × Confidence) ÷ Ef
 - Ketersediaan sinyal seluler dasar (2G) tetap ada di sebagian besar lokasi bencana meski sinyal data terganggu, sebagai prasyarat fallback SMS.
 
 ### 15.2 Pertanyaan Terbuka untuk Pemangku Kepentingan
-1. Apakah PijarNusa akan beroperasi sebagai entitas penggalang dana independen dengan izin PUB sendiri, atau bermitra dengan lembaga kemanusiaan berizin yang sudah ada?
+1. Apakah ArusKita akan beroperasi sebagai entitas penggalang dana independen dengan izin PUB sendiri, atau bermitra dengan lembaga kemanusiaan berizin yang sudah ada?
 2. Siapa yang menanggung Dana Cadangan Platform untuk skenario barang hilang/fraud (Bagian 8.5, 8.8) — margin platform, dana talangan investor, atau skema asuransi pihak ketiga?
 3. Apakah dibutuhkan verifikasi lapangan fisik (mis. kerja sama dengan BPBD daerah) untuk posko dengan nilai pendanaan besar (di atas ambang tertentu) sebagai lapisan kepercayaan tambahan?
 4. Bagaimana kebijakan data penyintas anak-anak pada foto verifikasi akhir — apakah face-blur otomatis wajib atau opsional (Bagian 9.1)?

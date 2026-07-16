@@ -44,6 +44,7 @@ func (r *Rest) MountEndpoint() {
 	admin := baseURL.Group("/admin")
 	admin.Use(r.middleware.AuthenticateUser, r.middleware.OnlyAdmin())
 	admin.GET("/dashboard", r.GetAdminDashboardHome)
+	admin.POST("/events", r.CreateAdminEvent)
 
 }
 

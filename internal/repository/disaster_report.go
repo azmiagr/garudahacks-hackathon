@@ -3,11 +3,14 @@ package repository
 import (
 	"strings"
 
+	"github.com/azmiagr/garudahacks-hackathon/entity"
 	"github.com/azmiagr/garudahacks-hackathon/model"
 	"gorm.io/gorm"
 )
 
 type IDisasterReportRepository interface {
+	CreateDisasterReport(tx *gorm.DB, report *entity.DisasterReport) error
+	GetDisasterReport(tx *gorm.DB, param model.GetDisasterReportParam) (*entity.DisasterReport, error)
 	GetLatestByPostIDs(tx *gorm.DB, param model.LatestDisasterReportParam) ([]model.LatestDisasterReportRow, error)
 }
 
@@ -17,6 +20,24 @@ type DisasterReportRepository struct {
 
 func NewDisasterReportRepository(db *gorm.DB) IDisasterReportRepository {
 	return &DisasterReportRepository{db: db}
+}
+
+func (r *DisasterReportRepository) CreateDisasterReport(tx *gorm.DB, report *entity.DisasterReport) error {
+	err := tx.Create(report).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *DisasterReportRepository) GetDisasterReport(tx *gorm.DB, param model.GetDisasterReportParam) (*entity.DisasterReport, error) {
+	var report entity.DisasterReport
+	err := tx.Where(&param).First(&report).Error
+	if err != nil {
+		return nil, err
+	}
+	return &report, nil
+
 }
 
 func (r *DisasterReportRepository) GetLatestByPostIDs(tx *gorm.DB, param model.LatestDisasterReportParam) ([]model.LatestDisasterReportRow, error) {
