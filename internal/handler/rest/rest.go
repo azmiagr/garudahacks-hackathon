@@ -34,11 +34,16 @@ func (r *Rest) MountEndpoint() {
 	baseURL.GET("/dashboard/transparency", r.GetPublicDashboardTransparency)
 
 	auth := baseURL.Group("/auth")
+	auth.POST("/login", r.Login)
 	adminRegister := auth.Group("/register/admin")
 	adminRegister.POST("/request-otp", r.RequestAdminRegisterOtp)
 	adminRegister.POST("/verify-otp", r.VerifyAdminRegisterOtp)
 	adminRegister.POST("/password", r.SetAdminRegisterPassword)
 	adminRegister.POST("/profile", r.CompleteAdminRegister)
+
+	admin := baseURL.Group("/admin")
+	admin.Use(r.middleware.AuthenticateUser, r.middleware.OnlyAdmin())
+	admin.GET("/dashboard", r.GetAdminDashboardHome)
 
 }
 

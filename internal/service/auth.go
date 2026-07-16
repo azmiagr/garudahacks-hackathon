@@ -28,6 +28,7 @@ const (
 )
 
 type IAuthService interface {
+	Login(req model.LoginRequest) (*model.LoginResponse, error)
 	RequestAdminRegisterOtp(req model.RequestAdminRegisterOtpRequest) (*model.RequestAdminRegisterOtpResponse, error)
 	VerifyAdminRegisterOtp(req model.VerifyAdminRegisterOtpRequest) (*model.VerifyAdminRegisterOtpResponse, error)
 	SetAdminRegisterPassword(req model.SetAdminRegisterPasswordRequest) (*model.SetAdminRegisterPasswordResponse, error)
@@ -61,6 +62,48 @@ func NewAuthService(
 		bcrypt:                      bcrypt,
 		jwtAuth:                     jwtAuth,
 	}
+}
+
+func (s *AuthService) Login(req model.LoginRequest) (*model.LoginResponse, error) {
+	email := strings.ToLower(strings.TrimSpace(req.Email))
+
+	user, err := s.userRepository.GetUser(s.db, model.GetUserParam{
+		Email: email,
+	})
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.Unauthorized("invalid email or password")
+		}
+		return nil, err
+	}
+
+	err = s.bcrypt.CompareAndHashPassword(user.Password, req.Password)
+	if err != nil {
+		return nil, apperrors.Unauthorized("invalid email or password")
+	}
+
+	if user.Status != "active" {
+		return nil, apperrors.Unauthorized("your account has been deactivated. Please contact administrator")
+	}
+
+	role, err := s.roleRepository.GetRole(s.db, model.GetRoleParam{
+		RoleID: user.RoleID,
+	})
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.Wrap(err, http.StatusInternalServerError, "user role is not found")
+		}
+		return nil, err
+	}
+
+	token, err := s.jwtAuth.CreateJWTToken(user.UserID, role.RoleName)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.LoginResponse{
+		Token: token,
+	}, nil
 }
 
 func (s *AuthService) RequestAdminRegisterOtp(req model.RequestAdminRegisterOtpRequest) (*model.RequestAdminRegisterOtpResponse, error) {
@@ -331,7 +374,7 @@ func (s *AuthService) CompleteAdminRegister(req model.CompleteAdminRegisterReque
 		User: model.RegisterUserResponse{
 			UserID:      user.UserID,
 			Role:        role.RoleName,
-			DisplayRole: adminPoskoDisplayRoleName,
+			DisplayRole: resolveDisplayRole(role.RoleName),
 			Name:        user.Name,
 			Email:       user.Email,
 			Status:      user.Status,
@@ -367,4 +410,12 @@ func validateNIK(nik string) error {
 	}
 
 	return nil
+}
+
+func resolveDisplayRole(roleName string) string {
+	if roleName == adminRoleName {
+		return adminPoskoDisplayRoleName
+	}
+
+	return roleName
 }

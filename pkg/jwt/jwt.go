@@ -25,9 +25,9 @@ type jsonWebToken struct {
 }
 
 type Claims struct {
-	UserID   uuid.UUID
-	IsAdmin  bool
-	RoleName string
+	UserID   uuid.UUID `json:"user_id"`
+	IsAdmin  bool      `json:"is_admin"`
+	RoleName string    `json:"role_name"`
 	jwt.RegisteredClaims
 }
 

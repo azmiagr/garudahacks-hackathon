@@ -2,7 +2,7 @@ FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
-RUN apk --no-cache add gcc musl-dev libwebp-dev
+RUN apk --no-cache add build-base pkgconf libwebp-dev
 
 COPY go.mod go.sum ./
 RUN go mod download
@@ -14,7 +14,7 @@ FROM alpine:3.21
 
 WORKDIR /app
 
-RUN apk --no-cache add ca-certificates tzdata libwebp
+RUN apk --no-cache add ca-certificates tzdata libwebp libstdc++
 
 COPY --from=builder /app/garudahacks .
 

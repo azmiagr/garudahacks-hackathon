@@ -18,6 +18,7 @@ type Repository struct {
 	DisbursementRepository         IDisbursementRepository
 	CustodyLogRepository           ICustodyLogRepository
 	OtpRepository                  IOtpRepository
+	AdminDashboardRepository       IAdminDashboardRepository
 }
 
 func NewRepository(db *gorm.DB) *Repository {
@@ -35,5 +36,6 @@ func NewRepository(db *gorm.DB) *Repository {
 		RoleRepository:                 NewRoleRepository(db),
 		RegistrationRepository:         NewRegistrationRepository(db),
 		AdminPoskoProfileRepository:    NewAdminPoskoProfileRepository(db),
+		AdminDashboardRepository:       NewAdminDashboardRepository(db),
 	}
 }
