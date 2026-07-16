@@ -7,11 +7,13 @@ import (
 )
 
 type Service struct {
-	UserService IUserService
+	UserService            IUserService
+	PublicDashboardService IPublicDashboardService
 }
 
 func NewService(repository *repository.Repository, bcrypt bcrypt.Interface, jwtAuth jwt.Interface) *Service {
 	return &Service{
-		UserService: NewUserService(repository.UserRepository),
+		UserService:            NewUserService(repository.UserRepository),
+		PublicDashboardService: NewPublicDashboardService(repository.PostRepository, repository.DisasterReportRepository, repository.DisasterEventRepository, repository.RequestRepository, repository.DeliveryVerificationRepository, repository.DonationRepository, repository.DisbursementRepository, repository.CustodyLogRepository),
 	}
 }

@@ -1,0 +1,46 @@
+services:
+  app:
+    image: ghcr.io/${GITHUB_REPOSITORY:-azmiagr/garudahacks-hackathon}:latest
+    container_name: garudahacks-app
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:${PORT:-8080}"
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - garudahacks-net
+
+  db:
+    image: mariadb:11.4
+    container_name: garudahacks-db
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3307:3306"
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      MARIADB_DATABASE: ${DB_NAME:-garudahacks}
+      MARIADB_USER: ${DB_USER:-garudahacks_user}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-garudahacks_pass}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - garudahacks-net
+
+volumes:
+  db_data:
+
+networks:
+  garudahacks-net:
+    driver: bridge

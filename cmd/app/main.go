@@ -25,6 +25,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	err = mariadb.Seed(db)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	repo := repository.NewRepository(db)
 	bcrypt := bcrypt.Init()
 	jwt := jwt.Init()
