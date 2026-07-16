@@ -19,7 +19,8 @@ type Requests struct {
 	CreatedAt      time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt      time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 
-	Items     []Items     `gorm:"foreignKey:RequestID;references:RequestID;constraint:onDelete:CASCADE"`
-	Donations []Donations `gorm:"foreignKey:RequestID;references:RequestID;constraint:onDelete:CASCADE"`
-	Orders    []Orders    `gorm:"foreignKey:RequestID;references:RequestID;constraint:onDelete:CASCADE"`
+	PaymentTransactions []PaymentTransactions `json:"payment_transactions" gorm:"foreignKey:RequestID;references:RequestID;constraint:onDelete:CASCADE"`
+	Items               []Items               `gorm:"foreignKey:RequestID;references:RequestID;constraint:onDelete:CASCADE"`
+	Donations           []Donations           `gorm:"foreignKey:RequestID;references:RequestID;constraint:onDelete:CASCADE"`
+	Orders              []Orders              `gorm:"foreignKey:RequestID;references:RequestID;constraint:onDelete:CASCADE"`
 }

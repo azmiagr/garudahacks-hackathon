@@ -33,6 +33,9 @@ func (r *Rest) MountEndpoint() {
 	baseURL.GET("/dashboard/distributions", r.GetPublicDashboardDistributions)
 	baseURL.GET("/dashboard/transparency", r.GetPublicDashboardTransparency)
 
+	payments := baseURL.Group("/payments")
+	payments.POST("/webhook", r.HandleMidtransNotification)
+
 	auth := baseURL.Group("/auth")
 	auth.POST("/login", r.Login)
 	authRegister := auth.Group("/register")
@@ -59,6 +62,7 @@ func (r *Rest) MountEndpoint() {
 	donor.Use(r.middleware.AuthenticateUser, r.middleware.OnlyDonor())
 	donor.GET("/dashboard/map", r.GetDonorDashboardMap)
 	donor.GET("/dashboard/posts/:post_id", r.GetDonorPostDetail)
+	donor.POST("/donations/payments", r.CreateDonationPayment)
 
 }
 

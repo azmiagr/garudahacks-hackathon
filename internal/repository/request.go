@@ -3,6 +3,7 @@ package repository
 import (
 	"github.com/azmiagr/garudahacks-hackathon/entity"
 	"github.com/azmiagr/garudahacks-hackathon/model"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -11,6 +12,8 @@ type IRequestRepository interface {
 	GetRequest(tx *gorm.DB, param model.GetRequestParam) (*entity.Requests, error)
 	GetFundingSummaryByReportIDs(tx *gorm.DB, param model.RequestFundingSummaryParam) ([]model.RequestFundingSummaryRow, error)
 	GetAllocationByDisaster(tx *gorm.DB, year int) ([]model.DisasterAllocationRow, error)
+	IncrementFundedAmount(tx *gorm.DB, requestID uuid.UUID, amount float64) error
+	GetDonationLockContext(tx *gorm.DB, requestID uuid.UUID) (*model.DonationLockContextRow, error)
 }
 
 type RequestRepository struct {
@@ -90,4 +93,43 @@ func (r *RequestRepository) GetAllocationByDisaster(tx *gorm.DB, year int) ([]mo
 	}
 
 	return rows, nil
+}
+
+func (r *RequestRepository) IncrementFundedAmount(tx *gorm.DB, requestID uuid.UUID, amount float64) error {
+	err := tx.Model(&entity.Requests{}).
+		Where("request_id = ?", requestID).
+		Update("funded_amount", gorm.Expr("funded_amount + ?", amount)).
+		Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *RequestRepository) GetDonationLockContext(tx *gorm.DB, requestID uuid.UUID) (*model.DonationLockContextRow, error) {
+	var row model.DonationLockContextRow
+
+	err := tx.Table("requests AS req").
+		Select(`
+			req.request_id,
+			p.post_id,
+			p.user_id AS admin_user_id,
+			p.name AS post_name,
+			p.latitude,
+			p.longitude
+		`).
+		Joins("JOIN disaster_reports AS dr ON dr.report_id = req.report_id").
+		Joins("JOIN posts AS p ON p.post_id = dr.post_id").
+		Where("req.request_id = ?", requestID).
+		Scan(&row).Error
+	if err != nil {
+		return nil, err
+	}
+
+	if row.RequestID == uuid.Nil {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	return &row, nil
 }
