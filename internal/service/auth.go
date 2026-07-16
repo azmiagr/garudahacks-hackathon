@@ -38,6 +38,7 @@ type IAuthService interface {
 	SetAdminRegisterPassword(req model.SetAdminRegisterPasswordRequest) (*model.SetAdminRegisterPasswordResponse, error)
 	CompleteAdminRegister(req model.CompleteAdminRegisterRequest) (*model.CompleteAdminRegisterResponse, error)
 	CompleteDonorRegister(req model.CompleteDonorRegisterRequest) (*model.CompleteDonorRegisterResponse, error)
+	CompleteStoreRegister(req model.CompleteStoreRegisterRequest) (*model.CompleteStoreRegisterResponse, error)
 }
 
 type AuthService struct {
@@ -50,6 +51,7 @@ type AuthService struct {
 	bcrypt                      appbcrypt.Interface
 	jwtAuth                     jwt.Interface
 	hasher                      hash.Interface
+	storeRepository             repository.IStoreRepository
 }
 
 func NewAuthService(
@@ -61,6 +63,7 @@ func NewAuthService(
 	bcrypt appbcrypt.Interface,
 	jwtAuth jwt.Interface,
 	hasher hash.Interface,
+	storeRepository repository.IStoreRepository,
 ) IAuthService {
 	return &AuthService{
 		db:                          mariadb.Connection,
@@ -72,8 +75,11 @@ func NewAuthService(
 		bcrypt:                      bcrypt,
 		jwtAuth:                     jwtAuth,
 		hasher:                      hasher,
+		storeRepository:             storeRepository,
 	}
 }
+
+const storeRoleName = "store"
 
 func (s *AuthService) Login(req model.LoginRequest) (*model.LoginResponse, error) {
 	email := strings.ToLower(strings.TrimSpace(req.Email))
@@ -549,6 +555,170 @@ func (s *AuthService) CompleteDonorRegister(req model.CompleteDonorRegisterReque
 	}, nil
 }
 
+func (s *AuthService) CompleteStoreRegister(req model.CompleteStoreRegisterRequest) (*model.CompleteStoreRegisterResponse, error) {
+	tx := s.db.Begin()
+	defer tx.Rollback()
+
+	session, err := s.registrationRepository.GetRegistrationSession(tx, model.GetRegistrationSessionParam{
+		RegistrationID: req.RegistrationID,
+	})
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.NotFound("registration session not found")
+		}
+		return nil, err
+	}
+
+	if session.ExpiresAt.Before(time.Now().UTC()) {
+		return nil, apperrors.BadRequest("registration session expired")
+	}
+
+	if session.OtpVerifiedAt == nil {
+		return nil, apperrors.BadRequest("otp must be verified before completing registration")
+	}
+
+	if session.PasswordHash == "" {
+		return nil, apperrors.BadRequest("password must be created before completing registration")
+	}
+
+	if session.RoleName != storeRoleName {
+		return nil, apperrors.BadRequest("registration session is not for store")
+	}
+
+	storeName := strings.TrimSpace(req.StoreName)
+	ownerName := strings.TrimSpace(req.OwnerName)
+	nib := normalizeBusinessNumber(req.NIB)
+
+	if storeName == "" {
+		return nil, apperrors.BadRequest("store name is required")
+	}
+	if ownerName == "" {
+		return nil, apperrors.BadRequest("owner name is required")
+	}
+	if nib == "" {
+		return nil, apperrors.BadRequest("nib is required")
+	}
+	if strings.TrimSpace(req.Address) == "" {
+		return nil, apperrors.BadRequest("address is required")
+	}
+
+	existingUser, err := s.userRepository.GetUser(tx, model.GetUserParam{
+		Email: session.Email,
+	})
+	if err == nil && existingUser != nil {
+		return nil, apperrors.Conflict("email already registered")
+	}
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	existingStore, err := s.storeRepository.GetStore(tx, model.GetStoreParam{
+		BusinessNumber: nib,
+	})
+	if err == nil && existingStore != nil {
+		return nil, apperrors.Conflict("nib already registered")
+	}
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	role, err := s.roleRepository.GetRole(tx, model.GetRoleParam{
+		RoleName: storeRoleName,
+	})
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.Wrap(err, http.StatusInternalServerError, "store role is not seeded")
+		}
+		return nil, err
+	}
+
+	user := &entity.User{
+		UserID:    uuid.New(),
+		RoleID:    role.RoleID,
+		Name:      ownerName,
+		Email:     session.Email,
+		Password:  session.PasswordHash,
+		Status:    "active",
+		KYCStatus: "pending",
+	}
+
+	err = s.userRepository.CreateUser(tx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	categoriesJSON, err := json.Marshal(req.Categories)
+	if err != nil {
+		return nil, err
+	}
+
+	store := &entity.Stores{
+		StoreID:         uuid.New(),
+		OwnerID:         user.UserID,
+		Name:            storeName,
+		BusinessNumber:  nib,
+		NPWP:            strings.TrimSpace(req.NPWP),
+		KTPImageURL:     strings.TrimSpace(req.KTPImageURL),
+		BankName:        strings.TrimSpace(req.BankName),
+		BankAccountNo:   strings.TrimSpace(req.BankAccountNo),
+		BankAccountName: strings.TrimSpace(req.BankAccountName),
+		CategoriesJSON:  string(categoriesJSON),
+		Address:         strings.TrimSpace(req.Address),
+		Latitude:        req.Latitude,
+		Longitude:       req.Longitude,
+	}
+
+	err = s.storeRepository.CreateStore(tx, store)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.registrationRepository.DeleteRegistrationSession(tx, session)
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := s.jwtAuth.CreateJWTToken(user.UserID, role.RoleName)
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Commit().Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.CompleteStoreRegisterResponse{
+		Token: token,
+		User: model.RegisterUserResponse{
+			UserID:      user.UserID,
+			Role:        role.RoleName,
+			DisplayRole: resolveDisplayRole(role.RoleName),
+			Name:        user.Name,
+			Email:       user.Email,
+			Status:      user.Status,
+			KYCStatus:   user.KYCStatus,
+		},
+		Store: model.StoreRegisterResponse{
+			StoreID:        store.StoreID,
+			OwnerID:        store.OwnerID,
+			Name:           store.Name,
+			BusinessNumber: store.BusinessNumber,
+			Address:        store.Address,
+			Latitude:       store.Latitude,
+			Longitude:      store.Longitude,
+		},
+	}, nil
+}
+
+func normalizeBusinessNumber(value string) string {
+	value = strings.TrimSpace(value)
+	value = strings.ReplaceAll(value, " ", "")
+	value = strings.ReplaceAll(value, "-", "")
+	value = strings.ReplaceAll(value, ".", "")
+	return value
+}
+
 func validatePassword(password string) error {
 	if len(password) < 8 {
 		return apperrors.BadRequest("password must be at least 8 characters")
@@ -583,9 +753,12 @@ func resolveDisplayRole(roleName string) string {
 		return adminPoskoDisplayRoleName
 	}
 
+	if roleName == storeRoleName {
+		return "toko_mitra"
+	}
+
 	return roleName
 }
-
 func normalizeRegisterRole(roleName string) (string, error) {
 	roleName = strings.ToLower(strings.TrimSpace(roleName))
 	if roleName == "" {

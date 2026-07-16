@@ -99,3 +99,41 @@ type RegisterUserResponse struct {
 	Status      string    `json:"status"`
 	KYCStatus   string    `json:"kyc_status"`
 }
+
+type CompleteStoreRegisterRequest struct {
+	RegistrationID  uuid.UUID `json:"registration_id" binding:"required"`
+	StoreName       string    `json:"store_name" binding:"required"`
+	OwnerName       string    `json:"owner_name" binding:"required"`
+	NIB             string    `json:"nib" binding:"required"`
+	NPWP            string    `json:"npwp"`
+	KTPImageURL     string    `json:"ktp_image_url"`
+	BankName        string    `json:"bank_name"`
+	BankAccountNo   string    `json:"bank_account_no"`
+	BankAccountName string    `json:"bank_account_name"`
+	Categories      []string  `json:"categories"`
+	Address         string    `json:"address" binding:"required"`
+	Latitude        float64   `json:"latitude" binding:"required"`
+	Longitude       float64   `json:"longitude" binding:"required"`
+}
+
+type CompleteStoreRegisterResponse struct {
+	Token string                `json:"token"`
+	User  RegisterUserResponse  `json:"user"`
+	Store StoreRegisterResponse `json:"store"`
+}
+
+type StoreRegisterResponse struct {
+	StoreID        uuid.UUID `json:"store_id"`
+	OwnerID        uuid.UUID `json:"owner_id"`
+	Name           string    `json:"name"`
+	BusinessNumber string    `json:"business_number"`
+	Address        string    `json:"address"`
+	Latitude       float64   `json:"latitude"`
+	Longitude      float64   `json:"longitude"`
+}
+
+type GetStoreParam struct {
+	StoreID        uuid.UUID `json:"store_id"`
+	OwnerID        uuid.UUID `json:"owner_id"`
+	BusinessNumber string    `json:"business_number"`
+}

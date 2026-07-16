@@ -32,7 +32,7 @@ func NewService(repository *repository.Repository, bcrypt bcrypt.Interface, jwtA
 		UserService:             NewUserService(repository.UserRepository, repository.RoleRepository),
 		PublicDashboardService:  publicDashboardService,
 		OtpService:              NewOtpService(repository.OtpRepository, repository.UserRepository),
-		AuthService:             NewAuthService(repository.UserRepository, repository.RoleRepository, repository.RegistrationRepository, repository.AdminPoskoProfileRepository, repository.DonorProfileRepository, bcrypt, jwtAuth, hasher),
+		AuthService:             NewAuthService(repository.UserRepository, repository.RoleRepository, repository.RegistrationRepository, repository.AdminPoskoProfileRepository, repository.DonorProfileRepository, bcrypt, jwtAuth, hasher, repository.StoreRepository),
 		AdminDashboardService:   NewAdminDashboardService(repository.AdminDashboardRepository),
 		AdminEventService:       NewAdminEventService(repository.PostRepository, repository.DisasterReportRepository, repository.DisasterEventRepository, repository.RequestRepository, repository.ItemRepository, supabase),
 		AdminProfileService:     NewAdminProfileService(repository.RoleRepository, repository.AdminPoskoProfileRepository),
