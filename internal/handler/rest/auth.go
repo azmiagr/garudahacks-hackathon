@@ -126,3 +126,20 @@ func (r *Rest) CompleteDonorRegister(c *gin.Context) {
 
 	response.Success(c, http.StatusCreated, "success to complete donor registration", result)
 }
+
+func (r *Rest) CompleteStoreRegister(c *gin.Context) {
+	var req model.CompleteStoreRegisterRequest
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "failed to bind request body", err)
+		return
+	}
+
+	result, err := r.service.AuthService.CompleteStoreRegister(req)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	response.Success(c, http.StatusCreated, "success to complete store registration", result)
+}

@@ -52,6 +52,9 @@ func (r *Rest) MountEndpoint() {
 	donorRegister := auth.Group("/register/donor")
 	donorRegister.POST("/profile", r.CompleteDonorRegister)
 
+	storeRegister := auth.Group("/register/store")
+	storeRegister.POST("/profile", r.CompleteStoreRegister)
+
 	admin := baseURL.Group("/admin")
 	admin.Use(r.middleware.AuthenticateUser, r.middleware.OnlyAdmin())
 	admin.GET("/dashboard", r.GetAdminDashboardHome)
