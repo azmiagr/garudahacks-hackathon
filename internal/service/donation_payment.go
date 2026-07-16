@@ -482,7 +482,7 @@ func buildLockedAllocation(orderID uuid.UUID, items []entity.Items, amount float
 }
 
 func (s *DonationPaymentService) createInitialCustodyLog(tx *gorm.DB, fromActorID uuid.UUID, toActorID uuid.UUID, orderID uuid.UUID, latitude float64, longitude float64, now time.Time) (*entity.CustodyLogs, error) {
-	latestLog, err := s.custodyLogRepository.GetLatestCustodyLog(tx)
+	latestLog, err := s.custodyLogRepository.GetLatestCustodyLogByOrderForUpdate(tx, orderID)
 
 	sequence := 1
 	prevHash := "GENESIS"
@@ -494,15 +494,18 @@ func (s *DonationPaymentService) createInitialCustodyLog(tx *gorm.DB, fromActorI
 	}
 
 	log := &entity.CustodyLogs{
-		LogsID:      uuid.NewString(),
-		OrderID:     orderID.String(),
-		FromActorID: fromActorID,
-		ToActorID:   toActorID,
-		Sequence:    sequence,
-		Latitude:    latitude,
-		Longitude:   longitude,
-		PrevHash:    prevHash,
-		CreatedAt:   now,
+		LogsID:          uuid.NewString(),
+		OrderID:         orderID.String(),
+		HandoffStage:    entity.CustodyStageFundLocked,
+		HandshakeMethod: entity.HandshakeMethodSystem,
+		FromActorID:     fromActorID,
+		ToActorID:       toActorID,
+		Sequence:        sequence,
+		Latitude:        latitude,
+		Longitude:       longitude,
+		PrevHash:        prevHash,
+		CapturedAt:      &now,
+		CreatedAt:       now,
 	}
 	log.CurrentHash = buildCustodyHash(*log)
 
@@ -515,16 +518,23 @@ func (s *DonationPaymentService) createInitialCustodyLog(tx *gorm.DB, fromActorI
 }
 
 func buildCustodyHash(log entity.CustodyLogs) string {
+	capturedAt := ""
+	if log.CapturedAt != nil {
+		capturedAt = log.CapturedAt.UTC().Format(time.RFC3339Nano)
+	}
 	payload := fmt.Sprintf(
-		"%s|%s|%s|%s|%d|%.8f|%.8f|%s|%s",
+		"%s|%s|%s|%s|%s|%s|%d|%.8f|%.8f|%s|%s|%s",
 		log.LogsID,
 		log.OrderID,
+		log.HandoffStage,
+		log.HandshakeMethod,
 		log.FromActorID.String(),
 		log.ToActorID.String(),
 		log.Sequence,
 		log.Latitude,
 		log.Longitude,
 		log.PrevHash,
+		capturedAt,
 		log.CreatedAt.UTC().Format(time.RFC3339Nano),
 	)
 

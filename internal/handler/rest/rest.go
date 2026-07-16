@@ -74,6 +74,18 @@ func (r *Rest) MountEndpoint() {
 	donor.GET("/points/rewards", r.GetRewards)
 	donor.POST("/points/rewards/claim", r.ClaimReward)
 
+	store := baseURL.Group("/store")
+	store.Use(r.middleware.AuthenticateUser, r.middleware.OnlyStore())
+	store.GET("/orders", r.GetStoreOrders)
+	store.GET("/orders/:order_id", r.GetStoreOrderDetail)
+	store.POST("/orders/:order_id/accept", r.AcceptStoreOrder)
+	store.POST("/orders/:order_id/ready", r.MarkStoreOrderReady)
+	store.POST("/orders/:order_id/handoff-token", r.GenerateStoreHandoffToken)
+
+	courier := baseURL.Group("/courier")
+	courier.Use(r.middleware.AuthenticateUser, r.middleware.OnlyCourier())
+	courier.POST("/custody/store-handoff", r.SubmitCourierStoreHandoff)
+
 }
 
 func (r *Rest) Run() {

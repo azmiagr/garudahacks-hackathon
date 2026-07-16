@@ -161,11 +161,16 @@ func resolveOrderStatus(row model.AdminDashboardOrderRow) string {
 		return "completed"
 	}
 
-	if row.OrderStatus == "approved" {
+	switch row.OrderStatus {
+	case entity.OrderStatusDelivered, entity.OrderStatusCompleted:
+		return "completed"
+	case entity.OrderStatusPickedUp, entity.OrderStatusInTransit:
 		return "sent"
-	}
-
-	if row.OrderStatus == "rejected" {
+	case entity.OrderStatusReadyForPickup:
+		return "ready"
+	case entity.OrderStatusAccepted, entity.OrderStatusPreparing:
+		return "preparing"
+	case entity.OrderStatusCancelled, entity.OrderStatusDisputed, "rejected":
 		return "cancelled"
 	}
 
@@ -178,6 +183,10 @@ func mapOrderStatusLabel(status string) string {
 		return "SELESAI"
 	case "sent":
 		return "DIKIRIM"
+	case "ready":
+		return "SIAP DIAMBIL"
+	case "preparing":
+		return "DISIAPKAN TOKO"
 	case "cancelled":
 		return "BATAL"
 	default:
@@ -191,6 +200,8 @@ func mapOrderBadgeVariant(status string) string {
 		return "success"
 	case "sent":
 		return "warning"
+	case "ready", "preparing":
+		return "info"
 	case "cancelled":
 		return "danger"
 	default:
@@ -207,6 +218,10 @@ func buildOrderDescription(status string, row model.AdminDashboardOrderRow) stri
 			return "Kurir dalam perjalanan"
 		}
 		return fmt.Sprintf("Kurir %s dalam perjalanan", row.CourierName)
+	case "ready":
+		return "Barang siap diambil kurir"
+	case "preparing":
+		return "Toko sedang menyiapkan barang"
 	case "cancelled":
 		return "Order dibatalkan"
 	default:
