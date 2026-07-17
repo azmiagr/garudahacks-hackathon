@@ -33,6 +33,7 @@ func Migrate(db *gorm.DB) error {
 		&entity.CustodyHandshakeToken{},
 		&entity.OrderItems{},
 		&entity.RegistrationSession{},
+		&entity.RevokedToken{},
 		&entity.AdminProfile{},
 		&entity.DonorProfile{},
 		&entity.PaymentTransactions{},

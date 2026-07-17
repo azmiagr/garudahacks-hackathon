@@ -29,6 +29,7 @@ type Repository struct {
 	PointRepository                 IPointRepository
 	StoreRepository                 IStoreRepository
 	CustodyHandshakeTokenRepository ICustodyHandshakeTokenRepository
+	RevokedTokenRepository          IRevokedTokenRepository
 }
 
 func NewRepository(db *gorm.DB) *Repository {
@@ -57,5 +58,6 @@ func NewRepository(db *gorm.DB) *Repository {
 		PointRepository:                 NewPointRepository(db),
 		StoreRepository:                 NewStoreRepository(db),
 		CustodyHandshakeTokenRepository: NewCustodyHandshakeTokenRepository(db),
+		RevokedTokenRepository:          NewRevokedTokenRepository(db),
 	}
 }

@@ -39,6 +39,10 @@ type LoginResponse struct {
 	Token string `json:"token"`
 }
 
+type LogoutResponse struct {
+	LoggedOut bool `json:"logged_out"`
+}
+
 type RequestAdminRegisterOtpResponse struct {
 	RegistrationID     uuid.UUID `json:"registration_id"`
 	Email              string    `json:"email"`
