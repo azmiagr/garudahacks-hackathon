@@ -28,7 +28,7 @@ type User struct {
 	DisasterReports       []DisasterReport       `json:"disaster_reports" gorm:"-"`
 	Requests              []Requests             `json:"requests" gorm:"foreignKey:CreatedBy;references:UserID;constraint:onDelete:CASCADE"`
 	Donations             []Donations            `json:"donations" gorm:"foreignKey:DonatedBy;references:UserID;constraint:onDelete:CASCADE"`
-	Orders                []Orders               `json:"orders" gorm:"foreignKey:CourierID;references:UserID;constraint:onDelete:CASCADE"`
+	Orders                []Orders               `json:"orders" gorm:"foreignKey:CourierID;references:UserID;constraint:-"`
 	DeliveryVerifications []DeliveryVerification `json:"delivery_verifications" gorm:"foreignKey:VerifiedBy;references:UserID;constraint:onDelete:CASCADE"`
 	DeliverySubmissions   []DeliveryVerification `json:"delivery_submissions" gorm:"foreignKey:SubmittedBy;references:UserID;constraint:onDelete:CASCADE"`
 	SentCustodyLogs       []CustodyLogs          `json:"sent_custody_logs" gorm:"foreignKey:FromActorID;references:UserID;constraint:onDelete:CASCADE"`

@@ -87,6 +87,11 @@ func (r *Rest) MountEndpoint() {
 
 	courier := baseURL.Group("/courier")
 	courier.Use(r.middleware.AuthenticateUser, r.middleware.OnlyCourier())
+	courier.GET("/tasks", r.GetCourierTasks)
+	courier.GET("/tasks/:order_id", r.GetCourierTaskDetail)
+	courier.POST("/tasks/:order_id/claim", r.ClaimCourierTask)
+	courier.POST("/tasks/:order_id/location", r.UpdateCourierLocation)
+	courier.POST("/tasks/:order_id/arrived", r.MarkCourierArrived)
 	courier.POST("/custody/store-handoff", r.SubmitCourierStoreHandoff)
 
 }
