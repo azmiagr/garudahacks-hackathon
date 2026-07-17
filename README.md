@@ -217,6 +217,8 @@ The outermost layer. Binds HTTP routes via Gin, parses request bodies, calls the
 
 All routes are namespaced under `/api/v1`. Currently implemented:
 
+Full interactive API documentation is available in the Postman collection: [ArusKita Postman Documentation](https://documenter.getpostman.com/view/33317073/2sBY4Mvgsz).
+
 ### Public
 
 | Method | Path                       | Description                                                                                |
