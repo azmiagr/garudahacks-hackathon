@@ -41,6 +41,29 @@ type CreateDonationPaymentResponse struct {
 	ExpiredAt            *time.Time `json:"expired_at"`
 }
 
+type DonationPaymentStatusResponse struct {
+	OrderID              string     `json:"order_id"`
+	DonationID           uuid.UUID  `json:"donation_id"`
+	PaymentTransactionID uuid.UUID  `json:"payment_transaction_id"`
+	Amount               int64      `json:"amount"`
+	PaymentMethod        string     `json:"payment_method"`
+	PaymentChannel       string     `json:"payment_channel"`
+	TransactionStatus    string     `json:"transaction_status"`
+	DonationStatus       string     `json:"donation_status"`
+	QRString             string     `json:"qr_string"`
+	QRURL                string     `json:"qr_url"`
+	VANumber             string     `json:"va_number"`
+	VABank               string     `json:"va_bank"`
+	PermataVANumber      string     `json:"permata_va_number"`
+	PaidAt               *time.Time `json:"paid_at"`
+	ExpiredAt            *time.Time `json:"expired_at"`
+	IsPaid               bool       `json:"is_paid"`
+	IsPending            bool       `json:"is_pending"`
+	IsFailed             bool       `json:"is_failed"`
+	IsExpired            bool       `json:"is_expired"`
+	CanRetry             bool       `json:"can_retry"`
+}
+
 type MidtransNotificationRequest struct {
 	TransactionStatus string             `json:"transaction_status"`
 	TransactionID     string             `json:"transaction_id"`

@@ -744,15 +744,17 @@ func (s *AuthService) CompleteCourierRegister(req model.CompleteCourierRegisterR
 
 	now := time.Now().UTC()
 	profile := &entity.CourierProfile{
-		ProfileID:         uuid.New(),
-		UserID:            user.UserID,
-		NIK:               hashedNIK,
-		VehicleType:       vehicleType,
-		VehicleCapacityKG: vehicleCapacityKG,
-		OperationalArea:   operationalArea,
-		OperationRadiusKM: req.OperationRadiusKM,
-		WaiverAccepted:    true,
-		WaiverAcceptedAt:  now,
+		ProfileID:                     uuid.New(),
+		UserID:                        user.UserID,
+		NIK:                           hashedNIK,
+		VehicleType:                   vehicleType,
+		VehicleCapacityKG:             vehicleCapacityKG,
+		OperationalArea:               operationalArea,
+		OperationRadiusKM:             req.OperationRadiusKM,
+		WaiverAccepted:                true,
+		WaiverAcceptedAt:              now,
+		IsAvailable:                   true,
+		UrgentTaskNotificationEnabled: true,
 	}
 
 	err = s.courierProfileRepository.CreateCourierProfile(tx, profile)

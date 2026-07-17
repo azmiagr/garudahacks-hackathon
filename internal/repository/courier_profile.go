@@ -9,6 +9,7 @@ import (
 type ICourierProfileRepository interface {
 	GetCourierProfile(tx *gorm.DB, param model.GetCourierProfileParam) (*entity.CourierProfile, error)
 	CreateCourierProfile(tx *gorm.DB, profile *entity.CourierProfile) error
+	UpdateCourierProfilePreferences(tx *gorm.DB, userID string, isAvailable bool, urgentTaskNotificationEnabled bool) error
 }
 
 type CourierProfileRepository struct {
@@ -35,5 +36,18 @@ func (r *CourierProfileRepository) CreateCourierProfile(tx *gorm.DB, profile *en
 		return err
 	}
 
+	return nil
+}
+
+func (r *CourierProfileRepository) UpdateCourierProfilePreferences(tx *gorm.DB, userID string, isAvailable bool, urgentTaskNotificationEnabled bool) error {
+	err := tx.Model(&entity.CourierProfile{}).
+		Where("user_id = ?", userID).
+		Updates(map[string]interface{}{
+			"is_available":                     isAvailable,
+			"urgent_task_notification_enabled": urgentTaskNotificationEnabled,
+		}).Error
+	if err != nil {
+		return err
+	}
 	return nil
 }
