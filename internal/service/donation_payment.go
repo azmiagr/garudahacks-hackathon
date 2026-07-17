@@ -392,6 +392,11 @@ func (s *DonationPaymentService) lockDonation(tx *gorm.DB, payment *entity.Payme
 	if err := s.orderItemRepository.CreateOrderItems(tx, allocation.OrderItems); err != nil {
 		return nil, err
 	}
+	for _, orderItem := range allocation.OrderItems {
+		if err := s.itemRepository.IncrementQuantityFulfilled(tx, orderItem.ItemID, orderItem.Quantity); err != nil {
+			return nil, err
+		}
+	}
 
 	donation.DonationStatus = donationStatusApproved
 	walletTransaction.TransactionStatus = donationStatusApproved
