@@ -50,4 +50,7 @@ type CustodyHandshakeResponse struct {
 	CurrentHash      string    `json:"current_hash"`
 	ShortCurrentHash string    `json:"short_current_hash"`
 	CapturedAt       time.Time `json:"captured_at"`
+	PointsAwarded    *int64    `json:"points_awarded,omitempty"`
+	DeliveryCount    *int64    `json:"delivery_count,omitempty"`
+	TotalDistanceKm  *float64  `json:"total_distance_km,omitempty"`
 }

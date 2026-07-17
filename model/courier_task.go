@@ -45,6 +45,7 @@ type CourierTaskRow struct {
 	PostAddress              string     `json:"post_address"`
 	PostLatitude             float64    `json:"post_latitude"`
 	PostLongitude            float64    `json:"post_longitude"`
+	PostPhoneNumber          string     `json:"post_phone_number"`
 	PostContactName          string     `json:"post_contact_name"`
 	CourierName              string     `json:"courier_name"`
 	ItemCount                int        `json:"item_count"`
@@ -54,9 +55,12 @@ type CourierTaskRow struct {
 	CourierLocationUpdatedAt *time.Time `json:"courier_location_updated_at"`
 	ArrivedAt                *time.Time `json:"arrived_at"`
 	PickupDeadlineAt         *time.Time `json:"pickup_deadline_at"`
+	DeliveryDeadlineAt       *time.Time `json:"delivery_deadline_at"`
+	ArrivedAtPostAt          *time.Time `json:"arrived_at_post_at"`
 	AcceptedAt               *time.Time `json:"accepted_at"`
 	ReadyAt                  *time.Time `json:"ready_at"`
 	PickedUpAt               *time.Time `json:"picked_up_at"`
+	DeliveredAt              *time.Time `json:"delivered_at"`
 	CreatedAt                time.Time  `json:"created_at"`
 	UpdatedAt                time.Time  `json:"updated_at"`
 }
@@ -88,26 +92,35 @@ type CourierTaskListItem struct {
 
 type CourierTaskDetailResponse struct {
 	CourierTaskListItem
-	RequestID                uuid.UUID  `json:"request_id"`
-	StoreID                  uuid.UUID  `json:"store_id"`
-	CourierID                uuid.UUID  `json:"courier_id"`
-	CourierName              string     `json:"courier_name"`
-	StoreLatitude            float64    `json:"store_latitude"`
-	StoreLongitude           float64    `json:"store_longitude"`
-	StorePhoneNumber         string     `json:"store_phone_number"`
-	PostLatitude             float64    `json:"post_latitude"`
-	PostLongitude            float64    `json:"post_longitude"`
-	PostContactName          string     `json:"post_contact_name"`
-	CourierLatitude          *float64   `json:"courier_latitude"`
-	CourierLongitude         *float64   `json:"courier_longitude"`
-	CourierLocationUpdatedAt *time.Time `json:"courier_location_updated_at"`
-	ArrivedAt                *time.Time `json:"arrived_at"`
-	PickupDeadlineAt         *time.Time `json:"pickup_deadline_at"`
-	EtaMinutes               *float64   `json:"eta_minutes"`
-	AcceptedAt               *time.Time `json:"accepted_at"`
-	ReadyAt                  *time.Time `json:"ready_at"`
-	PickedUpAt               *time.Time `json:"picked_up_at"`
-	CreatedAt                time.Time  `json:"created_at"`
+	RequestID                uuid.UUID            `json:"request_id"`
+	StoreID                  uuid.UUID            `json:"store_id"`
+	CourierID                uuid.UUID            `json:"courier_id"`
+	CourierName              string               `json:"courier_name"`
+	StoreLatitude            float64              `json:"store_latitude"`
+	StoreLongitude           float64              `json:"store_longitude"`
+	StorePhoneNumber         string               `json:"store_phone_number"`
+	PostLatitude             float64              `json:"post_latitude"`
+	PostLongitude            float64              `json:"post_longitude"`
+	PostPhoneNumber          string               `json:"post_phone_number"`
+	PostContactName          string               `json:"post_contact_name"`
+	CourierLatitude          *float64             `json:"courier_latitude"`
+	CourierLongitude         *float64             `json:"courier_longitude"`
+	CourierLocationUpdatedAt *time.Time           `json:"courier_location_updated_at"`
+	ArrivedAt                *time.Time           `json:"arrived_at"`
+	ArrivedAtPostAt          *time.Time           `json:"arrived_at_post_at"`
+	PickupDeadlineAt         *time.Time           `json:"pickup_deadline_at"`
+	DeliveryDeadlineAt       *time.Time           `json:"delivery_deadline_at"`
+	EtaMinutes               *float64             `json:"eta_minutes"`
+	LatestCustodyStage       string               `json:"latest_custody_stage"`
+	LatestCustodyHash        string               `json:"latest_custody_hash"`
+	LatestCustodyShortHash   string               `json:"latest_custody_short_hash"`
+	LatestCustodyCapturedAt  *time.Time           `json:"latest_custody_captured_at"`
+	AcceptedAt               *time.Time           `json:"accepted_at"`
+	ReadyAt                  *time.Time           `json:"ready_at"`
+	PickedUpAt               *time.Time           `json:"picked_up_at"`
+	DeliveredAt              *time.Time           `json:"delivered_at"`
+	CreatedAt                time.Time            `json:"created_at"`
+	Items                    []StoreOrderItemItem `json:"items"`
 }
 
 type CourierTaskActionResponse struct {
@@ -142,4 +155,10 @@ type CourierArrivedResponse struct {
 	OrderID     uuid.UUID `json:"order_id"`
 	OrderStatus string    `json:"order_status"`
 	ArrivedAt   time.Time `json:"arrived_at"`
+}
+
+type CourierArrivedAtPostResponse struct {
+	OrderID         uuid.UUID `json:"order_id"`
+	OrderStatus     string    `json:"order_status"`
+	ArrivedAtPostAt time.Time `json:"arrived_at_post_at"`
 }

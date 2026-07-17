@@ -7,12 +7,13 @@ import (
 )
 
 type DonationLockContextRow struct {
-	RequestID   uuid.UUID `json:"request_id"`
-	PostID      uuid.UUID `json:"post_id"`
-	AdminUserID uuid.UUID `json:"admin_user_id"`
-	PostName    string    `json:"post_name"`
-	Latitude    float64   `json:"latitude"`
-	Longitude   float64   `json:"longitude"`
+	RequestID       uuid.UUID `json:"request_id"`
+	PostID          uuid.UUID `json:"post_id"`
+	AdminUserID     uuid.UUID `json:"admin_user_id"`
+	PostName        string    `json:"post_name"`
+	PostPhoneNumber string    `json:"post_phone_number"`
+	Latitude        float64   `json:"latitude"`
+	Longitude       float64   `json:"longitude"`
 }
 
 type CreateDonationPaymentRequest struct {

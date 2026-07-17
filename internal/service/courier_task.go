@@ -23,19 +23,30 @@ type ICourierTaskService interface {
 	ClaimTask(user *entity.User, orderID uuid.UUID, req model.CourierTaskClaimRequest) (*model.CourierTaskActionResponse, error)
 	UpdateLocation(user *entity.User, orderID uuid.UUID, req model.CourierLocationPingRequest) (*model.CourierLocationPingResponse, error)
 	MarkArrived(user *entity.User, orderID uuid.UUID) (*model.CourierArrivedResponse, error)
+	MarkArrivedAtPost(user *entity.User, orderID uuid.UUID) (*model.CourierArrivedAtPostResponse, error)
+	GenerateHandoffToken(user *entity.User, orderID uuid.UUID) (*model.StoreHandoffTokenResponse, error)
 }
 
 type CourierTaskService struct {
-	db              *gorm.DB
-	orderRepository repository.IOrderRepository
-	storeRepository repository.IStoreRepository
+	db                       *gorm.DB
+	orderRepository          repository.IOrderRepository
+	storeRepository          repository.IStoreRepository
+	custodyLogRepository     repository.ICustodyLogRepository
+	handshakeTokenRepository repository.ICustodyHandshakeTokenRepository
 }
 
-func NewCourierTaskService(orderRepository repository.IOrderRepository, storeRepository repository.IStoreRepository) ICourierTaskService {
+func NewCourierTaskService(
+	orderRepository repository.IOrderRepository,
+	storeRepository repository.IStoreRepository,
+	custodyLogRepository repository.ICustodyLogRepository,
+	handshakeTokenRepository repository.ICustodyHandshakeTokenRepository,
+) ICourierTaskService {
 	return &CourierTaskService{
-		db:              mariadb.Connection,
-		orderRepository: orderRepository,
-		storeRepository: storeRepository,
+		db:                       mariadb.Connection,
+		orderRepository:          orderRepository,
+		storeRepository:          storeRepository,
+		custodyLogRepository:     custodyLogRepository,
+		handshakeTokenRepository: handshakeTokenRepository,
 	}
 }
 
@@ -82,7 +93,17 @@ func (s *CourierTaskService) GetCourierTaskDetail(user *entity.User, orderID uui
 		return nil, err
 	}
 
-	return buildCourierTaskDetailResponse(*row), nil
+	itemRows, err := s.orderRepository.GetStoreOrderItems(s.db, orderID)
+	if err != nil {
+		return nil, err
+	}
+
+	custodyLogs, err := s.custodyLogRepository.ListCustodyLogsByOrder(s.db, orderID)
+	if err != nil {
+		return nil, err
+	}
+
+	return buildCourierTaskDetailResponse(*row, itemRows, custodyLogs), nil
 }
 
 func (s *CourierTaskService) ClaimTask(user *entity.User, orderID uuid.UUID, req model.CourierTaskClaimRequest) (*model.CourierTaskActionResponse, error) {
@@ -168,7 +189,7 @@ func (s *CourierTaskService) UpdateLocation(user *entity.User, orderID uuid.UUID
 		return nil, err
 	}
 
-	store, err := s.storeRepository.GetStore(tx, model.GetStoreParam{StoreID: order.StoreID})
+	targetLat, targetLng, err := s.resolveLocationPingTarget(tx, order)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +199,7 @@ func (s *CourierTaskService) UpdateLocation(user *entity.User, orderID uuid.UUID
 		return nil, err
 	}
 
-	distanceKm := calculateDistanceMeters(req.Latitude, req.Longitude, store.Latitude, store.Longitude) / 1000
+	distanceKm := calculateDistanceMeters(req.Latitude, req.Longitude, targetLat, targetLng) / 1000
 	etaMinutes := estimateTravelMinutes(distanceKm)
 
 	return &model.CourierLocationPingResponse{
@@ -189,6 +210,90 @@ func (s *CourierTaskService) UpdateLocation(user *entity.User, orderID uuid.UUID
 		PickupDistanceKm:         distanceKm,
 		EtaMinutes:               etaMinutes,
 	}, nil
+}
+
+func (s *CourierTaskService) resolveLocationPingTarget(tx *gorm.DB, order *entity.Orders) (float64, float64, error) {
+	row, err := s.orderRepository.GetCourierTaskDetail(tx, model.CourierTaskDetailRepositoryParam{
+		OrderID:   order.OrderID,
+		CourierID: order.CourierID,
+	})
+	if err != nil {
+		return 0, 0, err
+	}
+
+	if order.OrderStatus == entity.OrderStatusInTransit {
+		return row.PostLatitude, row.PostLongitude, nil
+	}
+	return row.StoreLatitude, row.StoreLongitude, nil
+}
+
+func (s *CourierTaskService) MarkArrivedAtPost(user *entity.User, orderID uuid.UUID) (*model.CourierArrivedAtPostResponse, error) {
+	if user == nil {
+		return nil, apperrors.Unauthorized("user is required")
+	}
+
+	tx := s.db.Begin()
+	defer tx.Rollback()
+
+	now := time.Now().UTC()
+	err := s.orderRepository.MarkCourierArrivedAtPost(tx, orderID, user.UserID, now)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.Conflict("task is not active for this courier")
+		}
+		return nil, err
+	}
+
+	order, err := s.orderRepository.GetOrder(tx, orderID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Commit().Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.CourierArrivedAtPostResponse{
+		OrderID:         order.OrderID,
+		OrderStatus:     order.OrderStatus,
+		ArrivedAtPostAt: now,
+	}, nil
+}
+
+func (s *CourierTaskService) GenerateHandoffToken(user *entity.User, orderID uuid.UUID) (*model.StoreHandoffTokenResponse, error) {
+	if user == nil {
+		return nil, apperrors.Unauthorized("user is required")
+	}
+
+	tx := s.db.Begin()
+	defer tx.Rollback()
+
+	order, err := s.orderRepository.GetOrderForUpdate(tx, orderID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.NotFound("order not found")
+		}
+		return nil, err
+	}
+	if order.CourierID != user.UserID {
+		return nil, apperrors.Forbidden("order does not belong to this courier")
+	}
+	if order.OrderStatus != entity.OrderStatusInTransit {
+		return nil, apperrors.BadRequest("order is not in transit")
+	}
+
+	resp, err := createHandshakeToken(tx, s.handshakeTokenRepository, orderID, user.UserID, entity.CustodyStageCourierToPost, time.Now().UTC())
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Commit().Error
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
 }
 
 func (s *CourierTaskService) MarkArrived(user *entity.User, orderID uuid.UUID) (*model.CourierArrivedResponse, error) {
@@ -308,12 +413,38 @@ func paginateCourierTaskItems(items []model.CourierTaskListItem, limit int, offs
 	return items[offset:end]
 }
 
-func buildCourierTaskDetailResponse(row model.CourierTaskRow) *model.CourierTaskDetailResponse {
+func buildCourierTaskDetailResponse(row model.CourierTaskRow, itemRows []model.StoreOrderItemRow, custodyLogs []entity.CustodyLogs) *model.CourierTaskDetailResponse {
 	var etaMinutes *float64
 	if row.CourierLatitude != nil && row.CourierLongitude != nil {
-		distanceKm := calculateDistanceMeters(*row.CourierLatitude, *row.CourierLongitude, row.StoreLatitude, row.StoreLongitude) / 1000
+		targetLat, targetLng := row.StoreLatitude, row.StoreLongitude
+		if row.OrderStatus == entity.OrderStatusInTransit {
+			targetLat, targetLng = row.PostLatitude, row.PostLongitude
+		}
+		distanceKm := calculateDistanceMeters(*row.CourierLatitude, *row.CourierLongitude, targetLat, targetLng) / 1000
 		minutes := estimateTravelMinutes(distanceKm)
 		etaMinutes = &minutes
+	}
+
+	items := make([]model.StoreOrderItemItem, 0, len(itemRows))
+	for _, itemRow := range itemRows {
+		items = append(items, model.StoreOrderItemItem{
+			ItemID:    itemRow.ItemID,
+			Name:      itemRow.Name,
+			Quantity:  itemRow.Quantity,
+			Unit:      itemRow.Unit,
+			UnitPrice: itemRow.UnitPrice,
+			Subtotal:  itemRow.Subtotal,
+		})
+	}
+
+	var latestStage, latestHash, latestShortHash string
+	var latestCapturedAt *time.Time
+	if len(custodyLogs) > 0 {
+		latest := custodyLogs[len(custodyLogs)-1]
+		latestStage = latest.HandoffStage
+		latestHash = latest.CurrentHash
+		latestShortHash = shortenLedgerHash(latest.CurrentHash)
+		latestCapturedAt = latest.CapturedAt
 	}
 
 	return &model.CourierTaskDetailResponse{
@@ -327,16 +458,25 @@ func buildCourierTaskDetailResponse(row model.CourierTaskRow) *model.CourierTask
 		StorePhoneNumber:         row.StorePhoneNumber,
 		PostLatitude:             row.PostLatitude,
 		PostLongitude:            row.PostLongitude,
+		PostPhoneNumber:          row.PostPhoneNumber,
 		PostContactName:          row.PostContactName,
 		CourierLatitude:          row.CourierLatitude,
 		CourierLongitude:         row.CourierLongitude,
 		CourierLocationUpdatedAt: row.CourierLocationUpdatedAt,
 		ArrivedAt:                row.ArrivedAt,
+		ArrivedAtPostAt:          row.ArrivedAtPostAt,
 		PickupDeadlineAt:         row.PickupDeadlineAt,
+		DeliveryDeadlineAt:       row.DeliveryDeadlineAt,
 		EtaMinutes:               etaMinutes,
+		LatestCustodyStage:       latestStage,
+		LatestCustodyHash:        latestHash,
+		LatestCustodyShortHash:   latestShortHash,
+		LatestCustodyCapturedAt:  latestCapturedAt,
 		AcceptedAt:               row.AcceptedAt,
 		ReadyAt:                  row.ReadyAt,
 		PickedUpAt:               row.PickedUpAt,
+		DeliveredAt:              row.DeliveredAt,
 		CreatedAt:                row.CreatedAt,
+		Items:                    items,
 	}
 }

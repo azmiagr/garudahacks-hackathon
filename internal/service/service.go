@@ -27,6 +27,8 @@ type Service struct {
 	StoreGoodnessService     IStoreGoodnessService
 	StoreProfileService      IStoreProfileService
 	CourierTaskService       ICourierTaskService
+	CourierGoodnessService   ICourierGoodnessService
+	AdminCustodyService      IAdminCustodyService
 }
 
 func NewService(repository *repository.Repository, bcrypt bcrypt.Interface, jwtAuth jwt.Interface, supabase supabase.Interface, midtransConfig *config.MidtransConfig, hasher hash.Interface) *Service {
@@ -45,11 +47,13 @@ func NewService(repository *repository.Repository, bcrypt bcrypt.Interface, jwtA
 		DonorDashboardService:    NewDonorDashboardService(repository.PostRepository, repository.ItemRepository, publicDashboardService),
 		DonorTransactionService:  NewDonorTransactionService(repository.DonationRepository),
 		PointService:             pointService,
-		StoreCustodyService:      NewStoreCustodyService(repository.OrderRepository, repository.StoreRepository, repository.CustodyLogRepository, repository.CustodyHandshakeTokenRepository),
+		StoreCustodyService:      NewStoreCustodyService(repository.OrderRepository, repository.StoreRepository, repository.CustodyLogRepository, repository.CustodyHandshakeTokenRepository, repository.RequestRepository),
 		DonationPaymentService:   NewDonationPaymentService(repository.RequestRepository, repository.ItemRepository, repository.WalletRepository, repository.WalletTransactionRepository, repository.DonationRepository, repository.PaymentTransactionRepository, repository.OrderRepository, repository.OrderItemRepository, repository.CustodyLogRepository, pointService, midtransConfig),
 		StoreDisbursementService: NewStoreDisbursementService(repository.StoreRepository, repository.DisbursementRepository),
 		StoreGoodnessService:     NewStoreGoodnessService(repository.StoreRepository),
 		StoreProfileService:      NewStoreProfileService(repository.StoreRepository),
-		CourierTaskService:       NewCourierTaskService(repository.OrderRepository, repository.StoreRepository),
+		CourierTaskService:       NewCourierTaskService(repository.OrderRepository, repository.StoreRepository, repository.CustodyLogRepository, repository.CustodyHandshakeTokenRepository),
+		CourierGoodnessService:   NewCourierGoodnessService(repository.OrderRepository),
+		AdminCustodyService:      NewAdminCustodyService(repository.OrderRepository, repository.RequestRepository, repository.CustodyLogRepository, repository.CustodyHandshakeTokenRepository, repository.DeliveryVerificationRepository, pointService),
 	}
 }

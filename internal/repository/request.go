@@ -116,6 +116,7 @@ func (r *RequestRepository) GetDonationLockContext(tx *gorm.DB, requestID uuid.U
 			p.post_id,
 			p.user_id AS admin_user_id,
 			p.name AS post_name,
+			p.phone_number AS post_phone_number,
 			p.latitude,
 			p.longitude
 		`).
