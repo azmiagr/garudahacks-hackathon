@@ -1,6 +1,6 @@
 # ArusKita
 
-**Platform Ekosistem Logistik Kebencanaan Terpadu** — a Go REST API backend for a disaster-relief logistics platform built for GarudaHacks 7.0. It connects five actors (Admin Posko, Donatur, Toko Mitra, Relawan Kurir, and Penyintas) in a closed, auditable loop from incoming donations to verified delivery, using real-time geospatial mapping, autonomous order matching, and a QR/PIN-based chain of custody. See [docs/PRD.md](docs/PRD.md) for the full product requirements document.
+**Platform Ekosistem Logistik Kebencanaan Terpadu** a Go REST API backend for a disaster-relief logistics platform built for GarudaHacks 7.0. It connects five actors (Admin Posko, Donatur, Toko Mitra, Relawan Kurir, and Penyintas) in a closed, auditable loop from incoming donations to verified delivery, using real-time geospatial mapping, autonomous order matching, and a QR/PIN-based chain of custody. See [docs/PRD.md](docs/PRD.md) for the full product requirements document.
 
 The backend follows a simple 3-layer architecture (handler → service → repository) with the common pieces needed for an HTTP service: database access, authentication utilities, middleware, configuration, and standardized JSON responses.
 
@@ -177,40 +177,40 @@ All routes are namespaced under `/api/v1`. Currently implemented:
 
 ### Auth & Registration
 
-| Method | Path                             | Description                                                     |
-| ------ | -------------------------------- | ----------------------------------------------------------------|
-| POST   | `/auth/login`                    | Login with email/password, returns JWT                          |
-| POST   | `/auth/register/request-otp`     | Start registration, send OTP to email                           |
-| POST   | `/auth/register/verify-otp`      | Verify OTP for a pending registration session                   |
-| POST   | `/auth/register/password`        | Set password for a verified registration session                |
+| Method | Path                               | Description                                                   |
+| ------ | ---------------------------------- | ------------------------------------------------------------- |
+| POST   | `/auth/login`                      | Login with email/password, returns JWT                        |
+| POST   | `/auth/register/request-otp`       | Start registration, send OTP to email                         |
+| POST   | `/auth/register/verify-otp`        | Verify OTP for a pending registration session                 |
+| POST   | `/auth/register/password`          | Set password for a verified registration session              |
 | POST   | `/auth/register/admin/request-otp` | Start admin registration, send OTP to email                   |
-| POST   | `/auth/register/admin/verify-otp`  | Verify OTP for a pending admin registration                    |
-| POST   | `/auth/register/admin/password`    | Set password for a verified admin registration                 |
-| POST   | `/auth/register/admin/profile`     | Complete admin registration (NIK, affiliation, posko details)   |
-| POST   | `/auth/register/donor/profile`     | Complete donor registration (phone number, preferences)         |
+| POST   | `/auth/register/admin/verify-otp`  | Verify OTP for a pending admin registration                   |
+| POST   | `/auth/register/admin/password`    | Set password for a verified admin registration                |
+| POST   | `/auth/register/admin/profile`     | Complete admin registration (NIK, affiliation, posko details) |
+| POST   | `/auth/register/donor/profile`     | Complete donor registration (phone number, preferences)       |
 
 ### Admin (JWT + `admin` role required)
 
-| Method | Path              | Description                                                |
-| ------ | ----------------- | ----------------------------------------------------------- |
-| GET    | `/admin/dashboard`| Admin home dashboard: metrics/summary for the admin's posko  |
-| GET    | `/admin/profile`  | Admin profile (NIK, affiliation, aggregated report metrics)  |
-| POST   | `/admin/events`   | Create a disaster event/report tied to the admin's posko     |
+| Method | Path               | Description                                                 |
+| ------ | ------------------ | ----------------------------------------------------------- |
+| GET    | `/admin/dashboard` | Admin home dashboard: metrics/summary for the admin's posko |
+| GET    | `/admin/profile`   | Admin profile (NIK, affiliation, aggregated report metrics) |
+| POST   | `/admin/events`    | Create a disaster event/report tied to the admin's posko    |
 
 ### Donor (JWT + `donor` role required)
 
-| Method | Path                                          | Description                                                        |
-| ------ | --------------------------------------------- | ------------------------------------------------------------------- |
-| GET    | `/donor/profile`                              | Donor profile: verification status, level, lifetime donation stats  |
-| GET    | `/donor/dashboard/map`                        | Posko map view scoped to the donor experience                       |
-| GET    | `/donor/dashboard/posts/:post_id`             | Detail of a single posko/request for donors                         |
-| GET    | `/donor/donations/transactions`               | Donor's donation transaction history                                |
-| GET    | `/donor/donations/transactions/:donation_id`  | Detail of a single donation transaction                             |
-| POST   | `/donor/donations/payments`                   | Create a donation payment (Midtrans charge: QR/VA)                  |
-| GET    | `/donor/points`                               | Donor point dashboard (active/earned/redeemed totals)                |
-| GET    | `/donor/points/history`                       | Point transaction history (earn/redeem/adjustment ledger)           |
-| GET    | `/donor/points/rewards`                       | Browse claimable rewards (pulsa, voucher, donation)                  |
-| POST   | `/donor/points/rewards/claim`                 | Claim a reward using accumulated points                             |
+| Method | Path                                         | Description                                                        |
+| ------ | -------------------------------------------- | ------------------------------------------------------------------ |
+| GET    | `/donor/profile`                             | Donor profile: verification status, level, lifetime donation stats |
+| GET    | `/donor/dashboard/map`                       | Posko map view scoped to the donor experience                      |
+| GET    | `/donor/dashboard/posts/:post_id`            | Detail of a single posko/request for donors                        |
+| GET    | `/donor/donations/transactions`              | Donor's donation transaction history                               |
+| GET    | `/donor/donations/transactions/:donation_id` | Detail of a single donation transaction                            |
+| POST   | `/donor/donations/payments`                  | Create a donation payment (Midtrans charge: QR/VA)                 |
+| GET    | `/donor/points`                              | Donor point dashboard (active/earned/redeemed totals)              |
+| GET    | `/donor/points/history`                      | Point transaction history (earn/redeem/adjustment ledger)          |
+| GET    | `/donor/points/rewards`                      | Browse claimable rewards (pulsa, voucher, donation)                |
+| POST   | `/donor/points/rewards/claim`                | Claim a reward using accumulated points                            |
 
 Authentication (JWT + bcrypt), OTP-based email verification (`pkg/mail`), Midtrans payment integration, and CORS/role-based auth middleware are wired in `cmd/app/main.go`. Route groups for order matching, custody handshakes, and disbursement remain to be layered in per the PRD roadmap.
 
