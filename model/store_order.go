@@ -7,7 +7,7 @@ import (
 )
 
 type StoreOrderListParam struct {
-	Status string `form:"status"` // available, mine, accepted, ready, in_transit
+	Status string `form:"status"` // all, available, mine, accepted, ready, in_transit
 	Limit  int    `form:"limit"`
 	Offset int    `form:"offset"`
 }

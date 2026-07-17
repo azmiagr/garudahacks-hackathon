@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"math"
 	"sort"
 	"time"
@@ -126,7 +127,8 @@ func (s *PublicDashboardService) GetTransparency(param model.PublicTransparencyP
 		return nil, apperrors.InternalServer("failed to get verified disbursed total")
 	}
 
-	monthlyRows, err := s.disbursementRepo.GetMonthlyDisbursements(s.db, year)
+	monthWindow := buildRecentMonthWindow(time.Now().UTC(), 3)
+	monthlyRows, err := s.disbursementRepo.GetMonthlyDisbursementsInRange(s.db, monthWindow[0], monthWindow[len(monthWindow)-1].AddDate(0, 1, 0))
 	if err != nil {
 		return nil, apperrors.InternalServer("failed to get monthly disbursements")
 	}
@@ -153,7 +155,7 @@ func (s *PublicDashboardService) GetTransparency(param model.PublicTransparencyP
 			RefundAutomatic:         donationSummary.RefundAutomatic,
 			VerifiedFulfillmentRate: calculateRatePercentage(fulfillmentRate.VerifiedOrders, fulfillmentRate.TotalOrders),
 		},
-		MonthlyDisbursements: buildMonthlyDisbursementItems(monthlyRows),
+		MonthlyDisbursements: buildMonthlyDisbursementItems(monthlyRows, monthWindow),
 		AllocationByDisaster: buildDisasterAllocationItems(allocationRows),
 		LatestLedger:         buildPublicLedgerItems(ledgerRows),
 	}, nil
@@ -167,7 +169,21 @@ func calculateRatePercentage(part int64, total int64) int {
 	return calculateFundingPercentage(float64(part), float64(total))
 }
 
-func buildMonthlyDisbursementItems(rows []model.MonthlyDisbursementRow) []model.MonthlyDisbursementItem {
+func buildRecentMonthWindow(now time.Time, count int) []time.Time {
+	if count <= 0 {
+		count = 3
+	}
+
+	currentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	months := make([]time.Time, 0, count)
+	for offset := count - 1; offset >= 0; offset-- {
+		months = append(months, currentMonth.AddDate(0, -offset, 0))
+	}
+
+	return months
+}
+
+func buildMonthlyDisbursementItems(rows []model.MonthlyDisbursementRow, months []time.Time) []model.MonthlyDisbursementItem {
 	monthNames := map[int]string{
 		1:  "Jan",
 		2:  "Feb",
@@ -183,11 +199,18 @@ func buildMonthlyDisbursementItems(rows []model.MonthlyDisbursementRow) []model.
 		12: "Des",
 	}
 
-	items := make([]model.MonthlyDisbursementItem, 0, len(rows))
+	totalByMonth := make(map[string]float64, len(rows))
 	for _, row := range rows {
+		key := fmt.Sprintf("%04d-%02d", row.Year, row.Month)
+		totalByMonth[key] = row.Total
+	}
+
+	items := make([]model.MonthlyDisbursementItem, 0, len(months))
+	for _, month := range months {
+		key := fmt.Sprintf("%04d-%02d", month.Year(), int(month.Month()))
 		items = append(items, model.MonthlyDisbursementItem{
-			Month: monthNames[row.Month],
-			Total: row.Total,
+			Month: monthNames[int(month.Month())],
+			Total: totalByMonth[key],
 		})
 	}
 

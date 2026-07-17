@@ -562,10 +562,10 @@ func buildStoreOrderDetailResponse(row model.StoreOrderRow, itemRows []model.Sto
 
 func normalizeStoreOrderStatus(status string) string {
 	switch strings.ToLower(strings.TrimSpace(status)) {
-	case "mine", "accepted", "ready", "in_transit":
+	case "all", "available", "mine", "accepted", "ready", "in_transit":
 		return strings.ToLower(strings.TrimSpace(status))
 	default:
-		return "available"
+		return "all"
 	}
 }
 

@@ -467,6 +467,36 @@ func buildStoreOrderBaseQuery(tx *gorm.DB) *gorm.DB {
 
 func applyStoreOrderFilter(query *gorm.DB, param model.StoreOrderListRepositoryParam) *gorm.DB {
 	switch param.Status {
+	case "all":
+		return query.Where(`
+			(
+				o.order_status IN ?
+				AND o.store_id = ?
+			)
+			OR
+			(
+				o.store_id = ?
+				AND o.order_status IN ?
+			)
+		`,
+			[]string{entity.OrderStatusPending, entity.OrderStatusBroadcasted},
+			uuid.Nil,
+			param.StoreID,
+			[]string{
+				entity.OrderStatusAccepted,
+				entity.OrderStatusPreparing,
+				entity.OrderStatusReadyForPickup,
+				entity.OrderStatusPickedUp,
+				entity.OrderStatusInTransit,
+				entity.OrderStatusDelivered,
+				entity.OrderStatusCompleted,
+			},
+		)
+	case "available":
+		return query.Where("o.order_status IN ?", []string{
+			entity.OrderStatusPending,
+			entity.OrderStatusBroadcasted,
+		}).Where("o.store_id = ?", uuid.Nil)
 	case "mine":
 		return query.Where("o.store_id = ?", param.StoreID)
 	case "accepted":
@@ -482,10 +512,7 @@ func applyStoreOrderFilter(query *gorm.DB, param model.StoreOrderListRepositoryP
 			entity.OrderStatusInTransit,
 		})
 	default:
-		return query.Where("o.order_status IN ?", []string{
-			entity.OrderStatusPending,
-			entity.OrderStatusBroadcasted,
-		}).Where("o.store_id = ?", uuid.Nil)
+		return query
 	}
 }
 

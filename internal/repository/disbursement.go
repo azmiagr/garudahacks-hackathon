@@ -12,6 +12,7 @@ import (
 type IDisbursementRepository interface {
 	GetVerifiedDisbursedTotal(tx *gorm.DB, year int) (float64, error)
 	GetMonthlyDisbursements(tx *gorm.DB, year int) ([]model.MonthlyDisbursementRow, error)
+	GetMonthlyDisbursementsInRange(tx *gorm.DB, start time.Time, end time.Time) ([]model.MonthlyDisbursementRow, error)
 	GetStoreDisbursementSummary(tx *gorm.DB, param model.StoreDisbursementDashboardParam) (*model.StoreDisbursementSummaryRow, error)
 	GetStoreDisbursementHistory(tx *gorm.DB, param model.StoreDisbursementDashboardParam) ([]model.StoreDisbursementHistoryRow, error)
 	CountStoreDisbursementHistory(tx *gorm.DB, param model.StoreDisbursementDashboardParam) (int64, error)
@@ -62,6 +63,29 @@ func (r *DisbursementRepository) GetMonthlyDisbursements(tx *gorm.DB, year int) 
 	}
 
 	err := query.Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return rows, nil
+}
+
+func (r *DisbursementRepository) GetMonthlyDisbursementsInRange(tx *gorm.DB, start time.Time, end time.Time) ([]model.MonthlyDisbursementRow, error) {
+	var rows []model.MonthlyDisbursementRow
+
+	disbursedAtExpr := "COALESCE(disbursed_at, updated_at, created_at)"
+	err := tx.Table("disbursements").
+		Select(`
+			YEAR(`+disbursedAtExpr+`) AS year,
+			MONTH(`+disbursedAtExpr+`) AS month,
+			COALESCE(SUM(amount), 0) AS total
+		`).
+		Where("status = ?", "success").
+		Where(disbursedAtExpr+" >= ?", start).
+		Where(disbursedAtExpr+" < ?", end).
+		Group("YEAR(" + disbursedAtExpr + "), MONTH(" + disbursedAtExpr + ")").
+		Order("YEAR(" + disbursedAtExpr + ") ASC, MONTH(" + disbursedAtExpr + ") ASC").
+		Scan(&rows).Error
 	if err != nil {
 		return nil, err
 	}
