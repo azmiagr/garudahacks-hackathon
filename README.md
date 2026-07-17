@@ -8,8 +8,6 @@ The backend follows a 3-layer architecture (`handler -> service -> repository`) 
 
 ## Built With (Required)
 
-**What is it?**
-
 A set of tags this project was developed with. This list covers the main languages, frameworks, databases, libraries, APIs, services, and deployment tools used in the project.
 
 - **Language:** Go 1.25
@@ -25,9 +23,7 @@ A set of tags this project was developed with. This list covers the main languag
 - **Deployment:** Docker, Docker Compose, Alpine Linux runtime
 - **Architecture:** REST API, repository-service-handler layering
 
-## Tools Used (Required)
-
-**What is it?**
+## Tools Used
 
 List of all technologies used to build the project.
 
