@@ -1,21 +1,74 @@
 # ArusKita
 
-**Platform Ekosistem Logistik Kebencanaan Terpadu** a Go REST API backend for a disaster-relief logistics platform built for GarudaHacks 7.0. It connects five actors (Admin Posko, Donatur, Toko Mitra, Relawan Kurir, and Penyintas) in a closed, auditable loop from incoming donations to verified delivery, using real-time geospatial mapping, autonomous order matching, and a QR/PIN-based chain of custody. See [docs/PRD.md](docs/PRD.md) for the full product requirements document.
+**Platform Ekosistem Logistik Kebencanaan Terpadu** is a Go REST API backend for disaster-relief logistics, built for GarudaHacks 7.0. ArusKita connects Admin Posko, Donatur, Toko Mitra, Relawan Kurir, and Penyintas in a closed, auditable flow from incoming donations to verified last-mile delivery.
 
-The backend follows a simple 3-layer architecture (handler → service → repository) with the common pieces needed for an HTTP service: database access, authentication utilities, middleware, configuration, and standardized JSON responses.
+The system focuses on transparent disaster response: public map visibility, donation allocation, verified distribution proofs, QR/PIN-based custody handshakes, GPS-backed delivery verification, store disbursement tracking, and donor rewards. See [docs/PRD.md](docs/PRD.md) for the full product requirements document.
 
-## Tech Stack
+The backend follows a 3-layer architecture (`handler -> service -> repository`) with database access, authentication, middleware, configuration, payment integration, file upload support, and standardized JSON responses.
 
-| Package                                                       | Purpose                                                 |
-| ------------------------------------------------------------- | ------------------------------------------------------- |
-| [Gin](https://github.com/gin-gonic/gin)                       | HTTP web framework                                      |
-| [GORM](https://gorm.io)                                       | ORM for database operations                             |
-| [gorm/driver/mysql](https://github.com/go-gorm/mysql)         | MariaDB/MySQL driver                                    |
-| [golang-jwt/jwt](https://github.com/golang-jwt/jwt)           | JWT authentication                                      |
-| [google/uuid](https://github.com/google/uuid)                 | UUID generation                                         |
-| [joho/godotenv](https://github.com/joho/godotenv)             | `.env` file loading                                     |
-| [golang.org/x/crypto](https://pkg.go.dev/golang.org/x/crypto) | Bcrypt password hashing                                 |
-| `net/smtp`                                                    | Transactional email (verification codes, notifications) |
+## Built With (Required)
+
+**What is it?**
+
+A set of tags this project was developed with. This list covers the main languages, frameworks, databases, libraries, APIs, services, and deployment tools used in the project.
+
+- **Language:** Go 1.25
+- **Backend Framework:** Gin
+- **Database:** MariaDB / MySQL
+- **ORM:** GORM with `gorm.io/driver/mysql`
+- **Authentication:** JWT, bcrypt, token revocation table for logout
+- **Payment API:** Midtrans Core API / Snap integration
+- **Storage API:** Supabase Storage
+- **Email:** SMTP via Go `net/smtp`
+- **Image Processing:** WebP support via `github.com/chai2010/webp`
+- **Configuration:** `.env` loading with `godotenv`
+- **Deployment:** Docker, Docker Compose, Alpine Linux runtime
+- **Architecture:** REST API, repository-service-handler layering
+
+## Tools Used (Required)
+
+**What is it?**
+
+List of all technologies used to build the project.
+
+| Tool / Technology | Usage |
+| --- | --- |
+| Go | Main backend programming language |
+| Gin | HTTP routing, REST handlers, middleware integration |
+| GORM | Database ORM and AutoMigrate |
+| MariaDB 11.4 / MySQL | Relational database for users, reports, requests, payments, orders, custody logs, and disbursements |
+| Docker | Containerized application build and runtime |
+| Docker Compose | Local/app deployment with API service and MariaDB service |
+| JWT (`github.com/golang-jwt/jwt/v5`) | Access token creation and validation |
+| bcrypt (`golang.org/x/crypto`) | Password hashing |
+| Midtrans Go SDK | Donation payment charge creation and notification handling |
+| Supabase Storage Go SDK | Uploaded media/object storage support |
+| SMTP / Gmail-compatible SMTP | OTP and verification email delivery |
+| `github.com/google/uuid` | UUID primary keys and entity identifiers |
+| `github.com/joho/godotenv` | Environment variable loading for local development |
+| `github.com/chai2010/webp` | WebP image handling |
+| GitHub Container Registry | Container image target used by `docker-compose.yml` |
+| Alpine Linux | Minimal production image runtime |
+| Makefile | Local developer shortcuts |
+
+## Copyright Materials (Required)
+
+**What is it?**
+
+Please declare any third-party assets or copyrighted materials used in your project, such as icons, illustrations, images, datasets, music, etc.
+
+This repository is primarily backend source code created by the team. No copyrighted images, music, illustrations, icons, or external datasets are bundled in the repository. Dummy image URLs used in seed/demo SQL point to generated placeholder images from `dummyimage.com` and are used only for development/testing examples. Third-party open-source Go packages are listed in [go.mod](go.mod) and governed by their respective licenses.
+
+## Key Features
+
+- Public disaster map with posko coordinates, disaster type, funding target, funded amount, and urgency level.
+- Public transparency dashboard with total collected donations, verified disbursements, monthly disbursement breakdown, disaster allocation, and custody ledger.
+- Donor registration, login, profile, donation payments, transaction history, and points/rewards.
+- Admin posko onboarding, disaster event/report creation, profile metrics, and post handoff verification.
+- Store order management, order acceptance, readiness status, disbursement dashboard, and goodness trail.
+- Courier task claiming, location updates, pickup/delivery milestones, and custody handoff flow.
+- Chain-of-custody logs with QR/PIN handshake support and audit hashes.
+- JWT logout using server-side token revocation.
 
 ---
 
@@ -44,32 +97,35 @@ project-root/
 ├── docs/
 │   └── PRD.md                    # Product requirements document
 ├── entity/                       # GORM models (mapped to database tables)
-│   ├── user.go, role.go, otp.go, registration_session.go
+│   ├── user.go, role.go, otp.go, registration_session.go, revoked_token.go
 │   ├── admin_profile.go, donor_profile.go
 │   ├── post.go, disaster_events.go, disaster_report.go
 │   ├── requests.go, items.go, wallets.go, wallet_transactions.go, donations.go
-│   ├── payment_transaction.go, point.go
+│   ├── payment_transaction.go, point.go, custody_handshake_tokens.go
 │   ├── stores.go, orders.go, order_items.go
 │   ├── custody_logs.go, delivery_verifications.go, disbursements.go
 ├── internal/                     # Core application code (3-layer architecture)
 │   ├── handler/
 │   │   └── rest/
 │   │       ├── rest.go             # HTTP layer: route registration, server bootstrap
-│   │       ├── auth.go             # Login, admin/donor registration + OTP flow
+│   │       ├── auth.go             # Login, logout, registration + OTP flow
 │   │       ├── admin_profile.go, admin_dashboard.go, admin_event.go
 │   │       ├── donor_profile.go, donor_dashboard.go, donor_transaction.go
 │   │       ├── donation_payment.go # Donation checkout (Midtrans) + webhook
 │   │       ├── point.go            # Point dashboard, history, rewards, claims
+│   │       ├── store_custody.go, store_disbursement.go, store_goodness.go
+│   │       ├── courier_task.go, courier_goodness.go
+│   │       ├── admin_custody.go
 │   │       └── public_dashboard.go # Public dashboard endpoints
 │   ├── repository/                # Data access layer: database operations via GORM
 │   │   ├── repository.go          # Aggregates all repositories
 │   │   ├── user.go, role.go, registration.go, otp.go
 │   │   ├── post.go, disaster_event.go, disaster_report.go
 │   │   ├── request.go, item.go, donation.go, wallet.go, wallet_transaction.go
-│   │   ├── payment_transaction.go, point.go
+│   │   ├── payment_transaction.go, point.go, revoked_token.go
 │   │   ├── admin_profile.go, admin_dashboard.go, donor_profile.go
 │   │   ├── order.go, order_item.go, disbursement.go
-│   │   ├── delivery_verification.go, custody_log.go
+│   │   ├── delivery_verification.go, custody_log.go, custody_handshake_token.go
 │   └── service/                   # Business logic layer
 │       ├── service.go             # Aggregates all services
 │       ├── auth.go, otp.go, user.go
@@ -77,12 +133,16 @@ project-root/
 │       ├── donor_profile.go, donor_dashboard.go, donor_transaction.go
 │       ├── donation_payment.go     # Midtrans integration (charge + webhook handling)
 │       ├── point.go                # Point accrual, history, rewards, claims
+│       ├── store_custody.go, store_disbursement.go, store_goodness.go
+│       ├── courier_task.go, courier_goodness.go, admin_custody.go
 │       └── public_dashboard.go     # Public transparency/map/summary aggregation
 ├── model/                        # Request/response DTOs, one file per domain area
 │   ├── auth.go, otp.go, user.go
 │   ├── admin_profile.go, admin_dashboard.go, admin_event.go
 │   ├── donor_profile.go, donor_dashboard.go, donor_transaction.go
 │   ├── donation_payment.go, payment.go, point.go
+│   ├── store_custody.go, store_disbursement.go, store_goodness.go
+│   ├── courier_task.go, courier_goodness.go
 │   └── public_dashboard.go
 ├── pkg/                           # Shared utilities
 │   ├── bcrypt/
@@ -151,10 +211,10 @@ HTTP Request
 ### Layer Responsibilities
 
 **`internal/repository/`**
-Owns all direct database interaction. Each method corresponds to a specific query or mutation. Receives a `*gorm.DB` instance and is the only layer allowed to call GORM methods. Aggregated in `repository.go` as `Repository` (currently: `UserRepository`, `RoleRepository`, `RegistrationRepository`, `OtpRepository`, `PostRepository`, `DisasterReportRepository`, `DisasterEventRepository`, `RequestRepository`, `ItemRepository`, `WalletRepository`, `WalletTransactionRepository`, `DonationRepository`, `PaymentTransactionRepository`, `PointRepository`, `AdminPoskoProfileRepository`, `AdminDashboardRepository`, `DonorProfileRepository`, `OrderRepository`, `OrderItemRepository`, `DisbursementRepository`, `DeliveryVerificationRepository`, `CustodyLogRepository`).
+Owns all direct database interaction. Each method corresponds to a specific query or mutation. Receives a `*gorm.DB` instance and is the only layer allowed to call GORM methods. Aggregated in `repository.go` as `Repository` (including user/role/registration, public dashboard, disaster reports, requests/items, wallet/donation/payment, points/rewards, store/courier/order, disbursement, delivery verification, custody logs/tokens, and revoked token repositories).
 
 **`internal/service/`**
-Contains business logic. Depends on the repository for data access and on `pkg/bcrypt`, `pkg/jwt`, and `pkg/mail` for cross-cutting concerns. Never imports GORM directly. Aggregated in `service.go` as `Service` (currently: `UserService`, `AuthService`, `OtpService`, `AdminProfileService`, `AdminDashboardService`, `AdminEventService`, `DonorProfileService`, `DonorDashboardService`, `DonorTransactionService`, `DonationPaymentService` (Midtrans), `PointService`, `PublicDashboardService`).
+Contains business logic. Depends on the repository for data access and on utilities such as `pkg/bcrypt`, `pkg/jwt`, `pkg/mail`, `pkg/hash`, Supabase, and Midtrans for cross-cutting concerns. Aggregated in `service.go` as `Service` across auth, public dashboard, admin, donor, store, courier, payment, points, custody, and disbursement domains.
 
 **`internal/handler/rest/`**
 The outermost layer. Binds HTTP routes via Gin, parses request bodies, calls the service, and writes back JSON responses using the shared `pkg/response` formatter.
@@ -180,6 +240,7 @@ All routes are namespaced under `/api/v1`. Currently implemented:
 | Method | Path                               | Description                                                   |
 | ------ | ---------------------------------- | ------------------------------------------------------------- |
 | POST   | `/auth/login`                      | Login with email/password, returns JWT                        |
+| POST   | `/auth/logout`                     | Logout current JWT by revoking the token server-side          |
 | POST   | `/auth/register/request-otp`       | Start registration, send OTP to email                         |
 | POST   | `/auth/register/verify-otp`        | Verify OTP for a pending registration session                 |
 | POST   | `/auth/register/password`          | Set password for a verified registration session              |
@@ -188,6 +249,7 @@ All routes are namespaced under `/api/v1`. Currently implemented:
 | POST   | `/auth/register/admin/password`    | Set password for a verified admin registration                |
 | POST   | `/auth/register/admin/profile`     | Complete admin registration (NIK, affiliation, posko details) |
 | POST   | `/auth/register/donor/profile`     | Complete donor registration (phone number, preferences)       |
+| POST   | `/auth/register/store/profile`     | Complete store registration and store profile setup           |
 
 ### Admin (JWT + `admin` role required)
 
@@ -196,6 +258,7 @@ All routes are namespaced under `/api/v1`. Currently implemented:
 | GET    | `/admin/dashboard` | Admin home dashboard: metrics/summary for the admin's posko |
 | GET    | `/admin/profile`   | Admin profile (NIK, affiliation, aggregated report metrics) |
 | POST   | `/admin/events`    | Create a disaster event/report tied to the admin's posko    |
+| POST   | `/admin/custody/post-handoff` | Verify courier-to-posko handoff with QR/PIN custody data |
 
 ### Donor (JWT + `donor` role required)
 
@@ -212,7 +275,34 @@ All routes are namespaced under `/api/v1`. Currently implemented:
 | GET    | `/donor/points/rewards`                      | Browse claimable rewards (pulsa, voucher, donation)                |
 | POST   | `/donor/points/rewards/claim`                | Claim a reward using accumulated points                            |
 
-Authentication (JWT + bcrypt), OTP-based email verification (`pkg/mail`), Midtrans payment integration, and CORS/role-based auth middleware are wired in `cmd/app/main.go`. Route groups for order matching, custody handshakes, and disbursement remain to be layered in per the PRD roadmap.
+### Store (JWT + `store` role required)
+
+| Method | Path                            | Description                                      |
+| ------ | ------------------------------- | ------------------------------------------------ |
+| GET    | `/store/profile`                | Store profile and verification data             |
+| GET    | `/store/orders`                 | Store order list                                 |
+| GET    | `/store/orders/:order_id`       | Detail of a store order                          |
+| POST   | `/store/orders/:order_id/accept` | Accept an available order                       |
+| POST   | `/store/orders/:order_id/ready` | Mark order ready for pickup                      |
+| POST   | `/store/orders/:order_id/handoff-token` | Generate handoff token for courier pickup |
+| GET    | `/store/disbursements/dashboard` | Store disbursement dashboard                    |
+| GET    | `/store/goodness`               | Store goodness/contribution trail                |
+
+### Courier (JWT + `relawan` role required)
+
+| Method | Path                                  | Description                                      |
+| ------ | ------------------------------------- | ------------------------------------------------ |
+| GET    | `/courier/tasks`                      | Courier task list                                |
+| GET    | `/courier/tasks/:order_id`            | Courier task detail                              |
+| POST   | `/courier/tasks/:order_id/claim`      | Claim a delivery task                            |
+| POST   | `/courier/tasks/:order_id/location`   | Update courier GPS location                      |
+| POST   | `/courier/tasks/:order_id/arrived`    | Mark courier arrived at store                    |
+| POST   | `/courier/tasks/:order_id/arrived-post` | Mark courier arrived at posko                  |
+| POST   | `/courier/tasks/:order_id/handoff-token` | Generate handoff token for posko delivery    |
+| POST   | `/courier/custody/store-handoff`      | Submit store-to-courier handoff proof            |
+| GET    | `/courier/goodness`                   | Courier goodness/contribution trail              |
+
+Authentication (JWT + bcrypt), server-side token revocation for logout, OTP-based email verification (`pkg/mail`), Midtrans payment integration, Supabase storage, CORS, and role-based auth middleware are wired in `cmd/app/main.go`.
 
 ---
 
@@ -230,7 +320,10 @@ main()
   ├── repository.NewRepository(db)     # Data layer
   ├── bcrypt.Init()                    # Password util
   ├── jwt.Init()                       # Auth util
-  ├── service.NewService(repo, bcrypt, jwt)   # Business logic
+  ├── supabase.Init()                  # Object storage client
+  ├── config.LoadMidtransConfig()       # Payment gateway config
+  ├── hash.Init()                      # NIK hashing util
+  ├── service.NewService(...)          # Business logic
   ├── middleware.Init(service, jwt)    # Middleware chain
   └── rest.NewRest(service, middleware)
         ├── rest.MountEndpoint()       # Register routes
@@ -243,22 +336,29 @@ main()
 
 Copy `.env.example` to `.env` and fill in the values before running.
 
-| Variable         | Description                               | Example               |
-| ---------------- | ----------------------------------------- | --------------------- |
-| `DB_HOST`        | Database host                             | `localhost`           |
-| `DB_PORT`        | Database port                             | `3306`                |
-| `DB_NAME`        | Database name                             | `myapp`               |
-| `DB_USER`        | Database user                             | `root`                |
-| `DB_PASSWORD`    | Database password                         | `secret`              |
-| `ADDRESS`        | Server bind address                       | `localhost`           |
-| `PORT`           | Server port                               | `8080`                |
-| `TIME_OUT_LIMIT` | Request timeout (seconds)                 | `10`                  |
-| `JWT_SECRET_KEY` | Secret key for signing JWTs (min 256-bit) | `a-very-long-secret`  |
-| `JWT_EXP_TIME`   | JWT expiration in hours                   | `1`                   |
-| `SMTP_HOST`      | SMTP server host for outgoing email       | `smtp.gmail.com`      |
-| `SMTP_PORT`      | SMTP server port                          | `587`                 |
-| `SMTP_USERNAME`  | SMTP account used to send email           | `youremail@gmail.com` |
-| `SMTP_PASSWORD`  | SMTP account password/app password        | `yourpassword`        |
+| Variable | Description | Example |
+| --- | --- | --- |
+| `DB_HOST` | Database host | `localhost` |
+| `DB_PORT` | Database port | `3306` |
+| `DB_NAME` | Database name | `garudahacks` |
+| `DB_USER` | Database user | `garudahacks_user` |
+| `DB_PASSWORD` | Database password | `secret` |
+| `ADDRESS` | Server bind address | `localhost` |
+| `PORT` | Server port | `8080` |
+| `TIME_OUT_LIMIT` | Request timeout in seconds | `10` |
+| `JWT_SECRET_KEY` | Secret key for signing JWTs | `a-string-secret-at-least-256-bits-long` |
+| `JWT_EXP_TIME` | JWT expiration in hours | `1` |
+| `SMTP_HOST` | SMTP server host for outgoing email | `smtp.gmail.com` |
+| `SMTP_PORT` | SMTP server port | `587` |
+| `SMTP_USERNAME` | SMTP account used to send email | `youremail@gmail.com` |
+| `SMTP_PASSWORD` | SMTP account password/app password | `yourpassword` |
+| `SUPABASE_URL` | Supabase project URL | `https://yoururl.supabase.co` |
+| `SUPABASE_TOKEN` | Supabase service/access token | `your-token` |
+| `SUPABASE_BUCKET` | Supabase Storage bucket name | `your-bucket` |
+| `MIDTRANS_CLIENT_KEY` | Midtrans client key | `your-client-key` |
+| `MIDTRANS_SERVER_KEY` | Midtrans server key | `your-server-key` |
+| `MIDTRANS_ENVIRONMENT` | Midtrans environment | `sandbox` |
+| `NIK_HASH_SECRET` | Secret used for hashing sensitive identity data | `your-secret` |
 
 ---
 
@@ -275,7 +375,7 @@ Copy `.env.example` to `.env` and fill in the values before running.
 
    ```bash
    cp .env.example .env
-   # Edit .env with your database, JWT, and SMTP credentials
+   # Edit .env with your database, JWT, SMTP, Supabase, and Midtrans credentials
    ```
 
 3. **Install dependencies**
@@ -295,6 +395,12 @@ Copy `.env.example` to `.env` and fill in the values before running.
    ```
 
    On startup, the app connects to MariaDB, runs `AutoMigrate` for all entities, and seeds the `admin`, `donor`, `store`, and `relawan` roles plus a default admin user (`admin@example.com` / `admin123` — change this before any real deployment).
+
+   To run with Docker Compose:
+
+   ```bash
+   docker compose up -d
+   ```
 
 5. **Continue building**
    - Define new domain models in `entity/` and register them in `pkg/database/mariadb/migrate.go`
