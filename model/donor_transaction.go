@@ -8,7 +8,7 @@ import (
 
 type DonorDonationTransactionListParam struct {
 	UserID uuid.UUID
-	Status string // "", "all", "locked", "completed", "refund", "pending"
+	Status string // "", "all", "pending", "locked", "preparing", "ready", "shipping", "completed", "refund"
 	Limit  int
 	Offset int
 }
@@ -72,7 +72,7 @@ type DonorDonationTransactionCustodyLogRow struct {
 }
 
 type DonorDonationTransactionParam struct {
-	Status string `form:"status"` // all, pending, locked, completed, refund
+	Status string `form:"status"` // all, pending, locked, preparing, ready, shipping, completed, refund
 	Limit  int    `form:"limit"`
 	Offset int    `form:"offset"`
 }
