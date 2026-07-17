@@ -6,7 +6,7 @@ The system focuses on transparent disaster response: public map visibility, dona
 
 The backend follows a 3-layer architecture (`handler -> service -> repository`) with database access, authentication, middleware, configuration, payment integration, file upload support, and standardized JSON responses.
 
-## Built With (Required)
+## Built With
 
 A set of tags this project was developed with. This list covers the main languages, frameworks, databases, libraries, APIs, services, and deployment tools used in the project.
 
@@ -27,31 +27,27 @@ A set of tags this project was developed with. This list covers the main languag
 
 List of all technologies used to build the project.
 
-| Tool / Technology | Usage |
-| --- | --- |
-| Go | Main backend programming language |
-| Gin | HTTP routing, REST handlers, middleware integration |
-| GORM | Database ORM and AutoMigrate |
-| MariaDB 11.4 / MySQL | Relational database for users, reports, requests, payments, orders, custody logs, and disbursements |
-| Docker | Containerized application build and runtime |
-| Docker Compose | Local/app deployment with API service and MariaDB service |
-| JWT (`github.com/golang-jwt/jwt/v5`) | Access token creation and validation |
-| bcrypt (`golang.org/x/crypto`) | Password hashing |
-| Midtrans Go SDK | Donation payment charge creation and notification handling |
-| Supabase Storage Go SDK | Uploaded media/object storage support |
-| SMTP / Gmail-compatible SMTP | OTP and verification email delivery |
-| `github.com/google/uuid` | UUID primary keys and entity identifiers |
-| `github.com/joho/godotenv` | Environment variable loading for local development |
-| `github.com/chai2010/webp` | WebP image handling |
-| GitHub Container Registry | Container image target used by `docker-compose.yml` |
-| Alpine Linux | Minimal production image runtime |
-| Makefile | Local developer shortcuts |
+| Tool / Technology                    | Usage                                                                                               |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| Go                                   | Main backend programming language                                                                   |
+| Gin                                  | HTTP routing, REST handlers, middleware integration                                                 |
+| GORM                                 | Database ORM and AutoMigrate                                                                        |
+| MariaDB 11.4 / MySQL                 | Relational database for users, reports, requests, payments, orders, custody logs, and disbursements |
+| Docker                               | Containerized application build and runtime                                                         |
+| Docker Compose                       | Local/app deployment with API service and MariaDB service                                           |
+| JWT (`github.com/golang-jwt/jwt/v5`) | Access token creation and validation                                                                |
+| bcrypt (`golang.org/x/crypto`)       | Password hashing                                                                                    |
+| Midtrans Go SDK                      | Donation payment charge creation and notification handling                                          |
+| Supabase Storage Go SDK              | Uploaded media/object storage support                                                               |
+| SMTP / Gmail-compatible SMTP         | OTP and verification email delivery                                                                 |
+| `github.com/google/uuid`             | UUID primary keys and entity identifiers                                                            |
+| `github.com/joho/godotenv`           | Environment variable loading for local development                                                  |
+| `github.com/chai2010/webp`           | WebP image handling                                                                                 |
+| GitHub Container Registry            | Container image target used by `docker-compose.yml`                                                 |
+| Alpine Linux                         | Minimal production image runtime                                                                    |
+| Makefile                             | Local developer shortcuts                                                                           |
 
-## Copyright Materials (Required)
-
-**What is it?**
-
-Please declare any third-party assets or copyrighted materials used in your project, such as icons, illustrations, images, datasets, music, etc.
+## Copyright Materials
 
 This repository is primarily backend source code created by the team. No copyrighted images, music, illustrations, icons, or external datasets are bundled in the repository. Dummy image URLs used in seed/demo SQL point to generated placeholder images from `dummyimage.com` and are used only for development/testing examples. Third-party open-source Go packages are listed in [go.mod](go.mod) and governed by their respective licenses.
 
@@ -249,12 +245,12 @@ All routes are namespaced under `/api/v1`. Currently implemented:
 
 ### Admin (JWT + `admin` role required)
 
-| Method | Path               | Description                                                 |
-| ------ | ------------------ | ----------------------------------------------------------- |
-| GET    | `/admin/dashboard` | Admin home dashboard: metrics/summary for the admin's posko |
-| GET    | `/admin/profile`   | Admin profile (NIK, affiliation, aggregated report metrics) |
-| POST   | `/admin/events`    | Create a disaster event/report tied to the admin's posko    |
-| POST   | `/admin/custody/post-handoff` | Verify courier-to-posko handoff with QR/PIN custody data |
+| Method | Path                          | Description                                                 |
+| ------ | ----------------------------- | ----------------------------------------------------------- |
+| GET    | `/admin/dashboard`            | Admin home dashboard: metrics/summary for the admin's posko |
+| GET    | `/admin/profile`              | Admin profile (NIK, affiliation, aggregated report metrics) |
+| POST   | `/admin/events`               | Create a disaster event/report tied to the admin's posko    |
+| POST   | `/admin/custody/post-handoff` | Verify courier-to-posko handoff with QR/PIN custody data    |
 
 ### Donor (JWT + `donor` role required)
 
@@ -273,30 +269,30 @@ All routes are namespaced under `/api/v1`. Currently implemented:
 
 ### Store (JWT + `store` role required)
 
-| Method | Path                            | Description                                      |
-| ------ | ------------------------------- | ------------------------------------------------ |
-| GET    | `/store/profile`                | Store profile and verification data             |
-| GET    | `/store/orders`                 | Store order list                                 |
-| GET    | `/store/orders/:order_id`       | Detail of a store order                          |
-| POST   | `/store/orders/:order_id/accept` | Accept an available order                       |
-| POST   | `/store/orders/:order_id/ready` | Mark order ready for pickup                      |
+| Method | Path                                    | Description                               |
+| ------ | --------------------------------------- | ----------------------------------------- |
+| GET    | `/store/profile`                        | Store profile and verification data       |
+| GET    | `/store/orders`                         | Store order list                          |
+| GET    | `/store/orders/:order_id`               | Detail of a store order                   |
+| POST   | `/store/orders/:order_id/accept`        | Accept an available order                 |
+| POST   | `/store/orders/:order_id/ready`         | Mark order ready for pickup               |
 | POST   | `/store/orders/:order_id/handoff-token` | Generate handoff token for courier pickup |
-| GET    | `/store/disbursements/dashboard` | Store disbursement dashboard                    |
-| GET    | `/store/goodness`               | Store goodness/contribution trail                |
+| GET    | `/store/disbursements/dashboard`        | Store disbursement dashboard              |
+| GET    | `/store/goodness`                       | Store goodness/contribution trail         |
 
 ### Courier (JWT + `relawan` role required)
 
-| Method | Path                                  | Description                                      |
-| ------ | ------------------------------------- | ------------------------------------------------ |
-| GET    | `/courier/tasks`                      | Courier task list                                |
-| GET    | `/courier/tasks/:order_id`            | Courier task detail                              |
-| POST   | `/courier/tasks/:order_id/claim`      | Claim a delivery task                            |
-| POST   | `/courier/tasks/:order_id/location`   | Update courier GPS location                      |
-| POST   | `/courier/tasks/:order_id/arrived`    | Mark courier arrived at store                    |
-| POST   | `/courier/tasks/:order_id/arrived-post` | Mark courier arrived at posko                  |
-| POST   | `/courier/tasks/:order_id/handoff-token` | Generate handoff token for posko delivery    |
-| POST   | `/courier/custody/store-handoff`      | Submit store-to-courier handoff proof            |
-| GET    | `/courier/goodness`                   | Courier goodness/contribution trail              |
+| Method | Path                                     | Description                               |
+| ------ | ---------------------------------------- | ----------------------------------------- |
+| GET    | `/courier/tasks`                         | Courier task list                         |
+| GET    | `/courier/tasks/:order_id`               | Courier task detail                       |
+| POST   | `/courier/tasks/:order_id/claim`         | Claim a delivery task                     |
+| POST   | `/courier/tasks/:order_id/location`      | Update courier GPS location               |
+| POST   | `/courier/tasks/:order_id/arrived`       | Mark courier arrived at store             |
+| POST   | `/courier/tasks/:order_id/arrived-post`  | Mark courier arrived at posko             |
+| POST   | `/courier/tasks/:order_id/handoff-token` | Generate handoff token for posko delivery |
+| POST   | `/courier/custody/store-handoff`         | Submit store-to-courier handoff proof     |
+| GET    | `/courier/goodness`                      | Courier goodness/contribution trail       |
 
 Authentication (JWT + bcrypt), server-side token revocation for logout, OTP-based email verification (`pkg/mail`), Midtrans payment integration, Supabase storage, CORS, and role-based auth middleware are wired in `cmd/app/main.go`.
 
@@ -332,29 +328,29 @@ main()
 
 Copy `.env.example` to `.env` and fill in the values before running.
 
-| Variable | Description | Example |
-| --- | --- | --- |
-| `DB_HOST` | Database host | `localhost` |
-| `DB_PORT` | Database port | `3306` |
-| `DB_NAME` | Database name | `garudahacks` |
-| `DB_USER` | Database user | `garudahacks_user` |
-| `DB_PASSWORD` | Database password | `secret` |
-| `ADDRESS` | Server bind address | `localhost` |
-| `PORT` | Server port | `8080` |
-| `TIME_OUT_LIMIT` | Request timeout in seconds | `10` |
-| `JWT_SECRET_KEY` | Secret key for signing JWTs | `a-string-secret-at-least-256-bits-long` |
-| `JWT_EXP_TIME` | JWT expiration in hours | `1` |
-| `SMTP_HOST` | SMTP server host for outgoing email | `smtp.gmail.com` |
-| `SMTP_PORT` | SMTP server port | `587` |
-| `SMTP_USERNAME` | SMTP account used to send email | `youremail@gmail.com` |
-| `SMTP_PASSWORD` | SMTP account password/app password | `yourpassword` |
-| `SUPABASE_URL` | Supabase project URL | `https://yoururl.supabase.co` |
-| `SUPABASE_TOKEN` | Supabase service/access token | `your-token` |
-| `SUPABASE_BUCKET` | Supabase Storage bucket name | `your-bucket` |
-| `MIDTRANS_CLIENT_KEY` | Midtrans client key | `your-client-key` |
-| `MIDTRANS_SERVER_KEY` | Midtrans server key | `your-server-key` |
-| `MIDTRANS_ENVIRONMENT` | Midtrans environment | `sandbox` |
-| `NIK_HASH_SECRET` | Secret used for hashing sensitive identity data | `your-secret` |
+| Variable               | Description                                     | Example                                  |
+| ---------------------- | ----------------------------------------------- | ---------------------------------------- |
+| `DB_HOST`              | Database host                                   | `localhost`                              |
+| `DB_PORT`              | Database port                                   | `3306`                                   |
+| `DB_NAME`              | Database name                                   | `garudahacks`                            |
+| `DB_USER`              | Database user                                   | `garudahacks_user`                       |
+| `DB_PASSWORD`          | Database password                               | `secret`                                 |
+| `ADDRESS`              | Server bind address                             | `localhost`                              |
+| `PORT`                 | Server port                                     | `8080`                                   |
+| `TIME_OUT_LIMIT`       | Request timeout in seconds                      | `10`                                     |
+| `JWT_SECRET_KEY`       | Secret key for signing JWTs                     | `a-string-secret-at-least-256-bits-long` |
+| `JWT_EXP_TIME`         | JWT expiration in hours                         | `1`                                      |
+| `SMTP_HOST`            | SMTP server host for outgoing email             | `smtp.gmail.com`                         |
+| `SMTP_PORT`            | SMTP server port                                | `587`                                    |
+| `SMTP_USERNAME`        | SMTP account used to send email                 | `youremail@gmail.com`                    |
+| `SMTP_PASSWORD`        | SMTP account password/app password              | `yourpassword`                           |
+| `SUPABASE_URL`         | Supabase project URL                            | `https://yoururl.supabase.co`            |
+| `SUPABASE_TOKEN`       | Supabase service/access token                   | `your-token`                             |
+| `SUPABASE_BUCKET`      | Supabase Storage bucket name                    | `your-bucket`                            |
+| `MIDTRANS_CLIENT_KEY`  | Midtrans client key                             | `your-client-key`                        |
+| `MIDTRANS_SERVER_KEY`  | Midtrans server key                             | `your-server-key`                        |
+| `MIDTRANS_ENVIRONMENT` | Midtrans environment                            | `sandbox`                                |
+| `NIK_HASH_SECRET`      | Secret used for hashing sensitive identity data | `your-secret`                            |
 
 ---
 
