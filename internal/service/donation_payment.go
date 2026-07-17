@@ -45,6 +45,7 @@ const (
 
 type IDonationPaymentService interface {
 	CreateDonationPayment(user *entity.User, req model.CreateDonationPaymentRequest) (*model.CreateDonationPaymentResponse, error)
+	GetDonationPaymentStatus(user *entity.User, orderID string) (*model.DonationPaymentStatusResponse, error)
 	HandleMidtransNotification(req model.MidtransNotificationRequest) (*model.DonationLockStatusResponse, error)
 }
 
@@ -216,6 +217,41 @@ func (s *DonationPaymentService) CreateDonationPayment(user *entity.User, req mo
 	}
 
 	return buildCreateDonationPaymentResponse(payment), nil
+}
+
+func (s *DonationPaymentService) GetDonationPaymentStatus(user *entity.User, orderID string) (*model.DonationPaymentStatusResponse, error) {
+	if user == nil {
+		return nil, apperrors.Unauthorized("user is required")
+	}
+
+	orderID = strings.TrimSpace(orderID)
+	if orderID == "" {
+		return nil, apperrors.BadRequest("order_id is required")
+	}
+
+	payment, err := s.paymentTransactionRepository.GetPaymentTransaction(s.db, model.GetPaymentTransactionParam{
+		OrderID: orderID,
+		UserID:  user.UserID,
+	})
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.NotFound("payment transaction not found")
+		}
+		return nil, err
+	}
+
+	donation, err := s.donationRepository.GetDonation(s.db, model.GetDonationParam{
+		DonationID: payment.DonationID,
+		DonatedBy:  user.UserID,
+	})
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.NotFound("donation not found")
+		}
+		return nil, err
+	}
+
+	return buildDonationPaymentStatusResponse(payment, donation), nil
 }
 
 func (s *DonationPaymentService) HandleMidtransNotification(req model.MidtransNotificationRequest) (*model.DonationLockStatusResponse, error) {
@@ -657,6 +693,49 @@ func buildCreateDonationPaymentResponse(payment *entity.PaymentTransactions) *mo
 		VABank:               payment.VABank,
 		PermataVANumber:      payment.PermataVANumber,
 		ExpiredAt:            payment.ExpiredAt,
+	}
+}
+
+func buildDonationPaymentStatusResponse(payment *entity.PaymentTransactions, donation *entity.Donations) *model.DonationPaymentStatusResponse {
+	status := strings.ToLower(strings.TrimSpace(payment.TransactionStatus))
+	now := time.Now().UTC()
+	isFailed := isFailedPaymentStatus(status)
+	isExpired := status == paymentStatusExpire || (payment.ExpiredAt != nil && payment.ExpiredAt.Before(now) && payment.PaidAt == nil)
+	isPaid := payment.PaidAt != nil || status == paymentStatusSettlement || status == paymentStatusCapture
+	isPending := !isPaid && !isFailed && !isExpired
+
+	resp := &model.DonationPaymentStatusResponse{
+		OrderID:              payment.OrderID,
+		DonationID:           payment.DonationID,
+		PaymentTransactionID: payment.PaymentTransactionID,
+		Amount:               int64(math.Round(payment.Amount)),
+		PaymentMethod:        payment.PaymentMethod,
+		PaymentChannel:       payment.PaymentChannel,
+		TransactionStatus:    payment.TransactionStatus,
+		DonationStatus:       donation.DonationStatus,
+		QRString:             payment.QRString,
+		QRURL:                payment.QRURL,
+		VANumber:             payment.VANumber,
+		VABank:               payment.VABank,
+		PermataVANumber:      payment.PermataVANumber,
+		PaidAt:               payment.PaidAt,
+		ExpiredAt:            payment.ExpiredAt,
+		IsPaid:               isPaid,
+		IsPending:            isPending,
+		IsFailed:             isFailed,
+		IsExpired:            isExpired,
+		CanRetry:             isFailed || isExpired,
+	}
+
+	return resp
+}
+
+func isFailedPaymentStatus(status string) bool {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case paymentStatusCancel, paymentStatusDeny, paymentStatusFailure:
+		return true
+	default:
+		return false
 	}
 }
 

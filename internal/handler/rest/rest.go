@@ -78,6 +78,7 @@ func (r *Rest) MountEndpoint() {
 	donor.GET("/donations/transactions", r.GetDonorDonationTransactions)
 	donor.GET("/donations/transactions/:donation_id", r.GetDonorDonationTransactionDetail)
 	donor.POST("/donations/payments", r.CreateDonationPayment)
+	donor.GET("/donations/payments/:order_id/status", r.GetDonationPaymentStatus)
 	donor.GET("/points", r.GetPointDashboard)
 	donor.GET("/points/history", r.GetPointHistory)
 	donor.GET("/points/rewards", r.GetRewards)
@@ -96,6 +97,8 @@ func (r *Rest) MountEndpoint() {
 
 	courier := baseURL.Group("/courier")
 	courier.Use(r.middleware.AuthenticateUser, r.middleware.OnlyCourier())
+	courier.GET("/profile", r.GetCourierProfile)
+	courier.PATCH("/profile/preferences", r.UpdateCourierProfilePreferences)
 	courier.GET("/tasks", r.GetCourierTasks)
 	courier.GET("/tasks/:order_id", r.GetCourierTaskDetail)
 	courier.POST("/tasks/:order_id/claim", r.ClaimCourierTask)

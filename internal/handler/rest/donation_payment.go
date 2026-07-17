@@ -31,6 +31,21 @@ func (r *Rest) CreateDonationPayment(c *gin.Context) {
 	response.Success(c, http.StatusCreated, "success to create donation payment", result)
 }
 
+func (r *Rest) GetDonationPaymentStatus(c *gin.Context) {
+	user, ok := helper.GetLoginUserFromContext(c)
+	if !ok {
+		return
+	}
+
+	result, err := r.service.DonationPaymentService.GetDonationPaymentStatus(user, c.Param("order_id"))
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	response.Success(c, http.StatusOK, "success to get donation payment status", result)
+}
+
 func (r *Rest) HandleMidtransNotification(c *gin.Context) {
 	var req model.MidtransNotificationRequest
 	err := c.ShouldBindJSON(&req)

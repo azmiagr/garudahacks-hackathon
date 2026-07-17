@@ -27,6 +27,7 @@ type Service struct {
 	StoreGoodnessService     IStoreGoodnessService
 	StoreProfileService      IStoreProfileService
 	CourierTaskService       ICourierTaskService
+	CourierProfileService    ICourierProfileService
 	CourierGoodnessService   ICourierGoodnessService
 	AdminCustodyService      IAdminCustodyService
 }
@@ -53,6 +54,7 @@ func NewService(repository *repository.Repository, bcrypt bcrypt.Interface, jwtA
 		StoreGoodnessService:     NewStoreGoodnessService(repository.StoreRepository),
 		StoreProfileService:      NewStoreProfileService(repository.StoreRepository),
 		CourierTaskService:       NewCourierTaskService(repository.OrderRepository, repository.StoreRepository, repository.CustodyLogRepository, repository.CustodyHandshakeTokenRepository),
+		CourierProfileService:    NewCourierProfileService(repository.RoleRepository, repository.CourierProfileRepository, repository.OrderRepository, repository.PointRepository),
 		CourierGoodnessService:   NewCourierGoodnessService(repository.OrderRepository),
 		AdminCustodyService:      NewAdminCustodyService(repository.OrderRepository, repository.OrderItemRepository, repository.RequestRepository, repository.ItemRepository, repository.UserRepository, repository.CustodyLogRepository, repository.CustodyHandshakeTokenRepository, repository.DeliveryVerificationRepository, repository.DistributionProofRepository, repository.RequestSupplementalNeedRepository, pointService, supabase),
 	}

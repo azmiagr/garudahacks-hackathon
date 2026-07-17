@@ -83,6 +83,7 @@ type AdminDistributionProofData struct {
 	ProofID             uuid.UUID `json:"proof_id"`
 	OrderID             uuid.UUID `json:"order_id"`
 	ItemID              uuid.UUID `json:"item_id"`
+	ItemName            string    `json:"item_name"`
 	ImageURL            string    `json:"image_url"`
 	RecipientNote       string    `json:"recipient_note"`
 	DistributedQuantity int       `json:"distributed_quantity"`
