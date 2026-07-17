@@ -25,6 +25,28 @@ func (r *Rest) Login(c *gin.Context) {
 	response.Success(c, http.StatusOK, "success to login", result)
 }
 
+func (r *Rest) Logout(c *gin.Context) {
+	tokenValue, exists := c.Get("token")
+	if !exists {
+		response.Error(c, http.StatusUnauthorized, "token is required", nil)
+		return
+	}
+
+	token, ok := tokenValue.(string)
+	if !ok || token == "" {
+		response.Error(c, http.StatusUnauthorized, "token is required", nil)
+		return
+	}
+
+	result, err := r.service.AuthService.Logout(token)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	response.Success(c, http.StatusOK, "success to logout", result)
+}
+
 func (r *Rest) RequestAdminRegisterOtp(c *gin.Context) {
 	var req model.RequestAdminRegisterOtpRequest
 	err := c.ShouldBindJSON(&req)

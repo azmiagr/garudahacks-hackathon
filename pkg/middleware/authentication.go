@@ -32,6 +32,18 @@ func (m *middleware) AuthenticateUser(c *gin.Context) {
 		return
 	}
 
+	revoked, err := m.service.AuthService.IsTokenRevoked(token)
+	if err != nil {
+		response.Error(c, http.StatusUnauthorized, "failed to validate token", err)
+		c.Abort()
+		return
+	}
+	if revoked {
+		response.Error(c, http.StatusUnauthorized, "token has been revoked", nil)
+		c.Abort()
+		return
+	}
+
 	user, err := m.service.UserService.GetUser(model.GetUserParam{
 		UserID: userID,
 	})
@@ -48,5 +60,6 @@ func (m *middleware) AuthenticateUser(c *gin.Context) {
 	}
 
 	c.Set("user", user)
+	c.Set("token", token)
 	c.Next()
 }

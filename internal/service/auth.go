@@ -1,6 +1,8 @@
 package service
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -39,6 +41,8 @@ type IAuthService interface {
 	CompleteAdminRegister(req model.CompleteAdminRegisterRequest) (*model.CompleteAdminRegisterResponse, error)
 	CompleteDonorRegister(req model.CompleteDonorRegisterRequest) (*model.CompleteDonorRegisterResponse, error)
 	CompleteStoreRegister(req model.CompleteStoreRegisterRequest) (*model.CompleteStoreRegisterResponse, error)
+	Logout(token string) (*model.LogoutResponse, error)
+	IsTokenRevoked(token string) (bool, error)
 }
 
 type AuthService struct {
@@ -48,6 +52,7 @@ type AuthService struct {
 	registrationRepository      repository.IRegistrationRepository
 	adminPoskoProfileRepository repository.IAdminPoskoProfileRepository
 	donorProfileRepository      repository.IDonorProfileRepository
+	revokedTokenRepository      repository.IRevokedTokenRepository
 	bcrypt                      appbcrypt.Interface
 	jwtAuth                     jwt.Interface
 	hasher                      hash.Interface
@@ -60,6 +65,7 @@ func NewAuthService(
 	registrationRepository repository.IRegistrationRepository,
 	adminPoskoProfileRepository repository.IAdminPoskoProfileRepository,
 	donorProfileRepository repository.IDonorProfileRepository,
+	revokedTokenRepository repository.IRevokedTokenRepository,
 	bcrypt appbcrypt.Interface,
 	jwtAuth jwt.Interface,
 	hasher hash.Interface,
@@ -72,6 +78,7 @@ func NewAuthService(
 		registrationRepository:      registrationRepository,
 		adminPoskoProfileRepository: adminPoskoProfileRepository,
 		donorProfileRepository:      donorProfileRepository,
+		revokedTokenRepository:      revokedTokenRepository,
 		bcrypt:                      bcrypt,
 		jwtAuth:                     jwtAuth,
 		hasher:                      hasher,
@@ -121,6 +128,61 @@ func (s *AuthService) Login(req model.LoginRequest) (*model.LoginResponse, error
 	return &model.LoginResponse{
 		Token: token,
 	}, nil
+}
+
+func (s *AuthService) Logout(token string) (*model.LogoutResponse, error) {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return nil, apperrors.Unauthorized("token is required")
+	}
+
+	expiresAt, err := s.jwtAuth.GetTokenExpiresAt(token)
+	if err != nil {
+		return nil, apperrors.Unauthorized("failed to validate token")
+	}
+
+	now := time.Now().UTC()
+	if !expiresAt.After(now) {
+		return nil, apperrors.Unauthorized("token is expired")
+	}
+
+	tx := s.db.Begin()
+	defer tx.Rollback()
+
+	err = s.revokedTokenRepository.DeleteExpiredTokens(tx, now)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.revokedTokenRepository.CreateRevokedToken(tx, &entity.RevokedToken{
+		TokenHash: hashToken(token),
+		ExpiresAt: expiresAt.UTC(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Commit().Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.LogoutResponse{LoggedOut: true}, nil
+}
+
+func (s *AuthService) IsTokenRevoked(token string) (bool, error) {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return false, nil
+	}
+
+	now := time.Now().UTC()
+	return s.revokedTokenRepository.ExistsActiveTokenHash(s.db, hashToken(token), now)
+}
+
+func hashToken(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
 }
 
 func (s *AuthService) RequestAdminRegisterOtp(req model.RequestAdminRegisterOtpRequest) (*model.RequestAdminRegisterOtpResponse, error) {

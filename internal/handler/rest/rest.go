@@ -38,6 +38,7 @@ func (r *Rest) MountEndpoint() {
 
 	auth := baseURL.Group("/auth")
 	auth.POST("/login", r.Login)
+	auth.POST("/logout", r.middleware.AuthenticateUser, r.Logout)
 	authRegister := auth.Group("/register")
 	authRegister.POST("/request-otp", r.RequestRegisterOtp)
 	authRegister.POST("/verify-otp", r.VerifyAdminRegisterOtp)
