@@ -617,11 +617,24 @@ func applyChargeResponseToPayment(payment *entity.PaymentTransactions, resp *cor
 		}
 	}
 	if resp.ExpiryTime != "" {
-		if expiredAt, err := time.ParseInLocation("2006-01-02 15:04:05", resp.ExpiryTime, time.Local); err == nil {
+		if expiredAt, err := time.ParseInLocation("2006-01-02 15:04:05", resp.ExpiryTime, midtransTimeLocation()); err == nil {
 			utc := expiredAt.UTC()
 			payment.ExpiredAt = &utc
 		}
 	}
+}
+
+// midtransTimeLocation returns Asia/Jakarta (WIB), the timezone Midtrans always
+// uses for its timestamp fields (e.g. expiry_time), regardless of server locale.
+// Parsing with time.Local instead silently corrupts the value whenever the
+// server's local timezone isn't WIB (e.g. a UTC container), because the same
+// wall-clock numbers get relabeled as a different offset instead of converted.
+func midtransTimeLocation() *time.Location {
+	loc, err := time.LoadLocation("Asia/Jakarta")
+	if err != nil {
+		return time.FixedZone("WIB", 7*60*60)
+	}
+	return loc
 }
 
 func stringPtr(value string) *string {
