@@ -35,8 +35,15 @@ type Orders struct {
 	DeliveredAt     *time.Time `json:"delivered_at" gorm:"type:datetime"`
 	CompletedAt     *time.Time `json:"completed_at" gorm:"type:datetime"`
 	CancelledAt     *time.Time `json:"cancelled_at" gorm:"type:datetime"`
-	CreatedAt       time.Time  `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt       time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
+
+	CourierLatitude          *float64   `json:"courier_latitude" gorm:"type:decimal(10,8)"`
+	CourierLongitude         *float64   `json:"courier_longitude" gorm:"type:decimal(11,8)"`
+	CourierLocationUpdatedAt *time.Time `json:"courier_location_updated_at" gorm:"type:datetime"`
+	ArrivedAt                *time.Time `json:"arrived_at" gorm:"type:datetime"`
+	PickupDeadlineAt         *time.Time `json:"pickup_deadline_at" gorm:"type:datetime"`
+
+	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 
 	DeliveryVerifications []DeliveryVerification  `json:"delivery_verifications" gorm:"foreignKey:OrderID;references:OrderID;constraint:onDelete:CASCADE"`
 	CustodyLogs           []CustodyLogs           `json:"custody_logs" gorm:"foreignKey:OrderID;references:OrderID;constraint:onDelete:CASCADE"`

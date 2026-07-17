@@ -26,6 +26,7 @@ type Service struct {
 	StoreDisbursementService IStoreDisbursementService
 	StoreGoodnessService     IStoreGoodnessService
 	StoreProfileService      IStoreProfileService
+	CourierTaskService       ICourierTaskService
 }
 
 func NewService(repository *repository.Repository, bcrypt bcrypt.Interface, jwtAuth jwt.Interface, supabase supabase.Interface, midtransConfig *config.MidtransConfig, hasher hash.Interface) *Service {
@@ -49,5 +50,6 @@ func NewService(repository *repository.Repository, bcrypt bcrypt.Interface, jwtA
 		StoreDisbursementService: NewStoreDisbursementService(repository.StoreRepository, repository.DisbursementRepository),
 		StoreGoodnessService:     NewStoreGoodnessService(repository.StoreRepository),
 		StoreProfileService:      NewStoreProfileService(repository.StoreRepository),
+		CourierTaskService:       NewCourierTaskService(repository.OrderRepository, repository.StoreRepository),
 	}
 }

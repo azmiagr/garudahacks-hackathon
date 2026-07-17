@@ -125,6 +125,14 @@ func (s *DonationPaymentService) CreateDonationPayment(user *entity.User, req mo
 		return nil, apperrors.BadRequest("request is not available for donation")
 	}
 
+	items, err := s.itemRepository.GetItemsByRequestID(tx, model.GetItemParam{RequestID: req.RequestID})
+	if err != nil {
+		return nil, err
+	}
+	if len(buildLockedAllocation(uuid.Nil, items, float64(req.Amount)).OrderItems) == 0 {
+		return nil, apperrors.BadRequest("request has no items available to fund with this amount")
+	}
+
 	wallet, err := s.walletRepository.GetWallet(tx, model.GetWalletParam{UserID: user.UserID})
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -313,6 +321,9 @@ func (s *DonationPaymentService) lockDonation(tx *gorm.DB, payment *entity.Payme
 
 	lockContext, err := s.requestRepository.GetDonationLockContext(tx, payment.RequestID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.BadRequest("request is not linked to a valid disaster report and post")
+		}
 		return nil, err
 	}
 
