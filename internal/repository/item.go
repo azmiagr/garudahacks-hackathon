@@ -13,6 +13,7 @@ type IItemRepository interface {
 	GetItem(tx *gorm.DB, param model.GetItemParam) (*entity.Items, error)
 	GetItemsByRequestID(tx *gorm.DB, param model.GetItemParam) ([]entity.Items, error)
 	GetDonorPostDetailItems(tx *gorm.DB, requestID uuid.UUID) ([]model.DonorPostDetailItemRow, error)
+	IncrementQuantityNeeded(tx *gorm.DB, itemID uuid.UUID, quantity int, estimatedTotal float64) error
 }
 
 type ItemRepository struct {
@@ -77,4 +78,13 @@ func (r *ItemRepository) GetDonorPostDetailItems(tx *gorm.DB, requestID uuid.UUI
 	}
 
 	return rows, nil
+}
+
+func (r *ItemRepository) IncrementQuantityNeeded(tx *gorm.DB, itemID uuid.UUID, quantity int, estimatedTotal float64) error {
+	return tx.Model(&entity.Items{}).
+		Where("item_id = ?", itemID).
+		Updates(map[string]interface{}{
+			"quantity_needed": gorm.Expr("quantity_needed + ?", quantity),
+			"estimated_total": gorm.Expr("estimated_total + ?", estimatedTotal),
+		}).Error
 }

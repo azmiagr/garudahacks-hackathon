@@ -7,9 +7,10 @@ import (
 )
 
 const (
-	CustodyStageFundLocked     = "fund_locked"
-	CustodyStageStoreToCourier = "store_to_courier"
-	CustodyStageCourierToPost  = "courier_to_post"
+	CustodyStageFundLocked            = "fund_locked"
+	CustodyStageStoreToCourier        = "store_to_courier"
+	CustodyStageCourierToPost         = "courier_to_post"
+	CustodyStageDistributionCompleted = "distribution_completed"
 
 	HandshakeMethodSystem = "system"
 	HandshakeMethodQR     = "qr"

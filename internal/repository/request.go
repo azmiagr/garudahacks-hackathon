@@ -13,6 +13,7 @@ type IRequestRepository interface {
 	GetFundingSummaryByReportIDs(tx *gorm.DB, param model.RequestFundingSummaryParam) ([]model.RequestFundingSummaryRow, error)
 	GetAllocationByDisaster(tx *gorm.DB, year int) ([]model.DisasterAllocationRow, error)
 	IncrementFundedAmount(tx *gorm.DB, requestID uuid.UUID, amount float64) error
+	IncrementFundingTarget(tx *gorm.DB, requestID uuid.UUID, amount float64) error
 	GetDonationLockContext(tx *gorm.DB, requestID uuid.UUID) (*model.DonationLockContextRow, error)
 }
 
@@ -99,6 +100,18 @@ func (r *RequestRepository) IncrementFundedAmount(tx *gorm.DB, requestID uuid.UU
 	err := tx.Model(&entity.Requests{}).
 		Where("request_id = ?", requestID).
 		Update("funded_amount", gorm.Expr("funded_amount + ?", amount)).
+		Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *RequestRepository) IncrementFundingTarget(tx *gorm.DB, requestID uuid.UUID, amount float64) error {
+	err := tx.Model(&entity.Requests{}).
+		Where("request_id = ?", requestID).
+		Update("funding_target", gorm.Expr("funding_target + ?", amount)).
 		Error
 	if err != nil {
 		return err

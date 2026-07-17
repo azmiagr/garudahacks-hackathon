@@ -54,6 +54,6 @@ func NewService(repository *repository.Repository, bcrypt bcrypt.Interface, jwtA
 		StoreProfileService:      NewStoreProfileService(repository.StoreRepository),
 		CourierTaskService:       NewCourierTaskService(repository.OrderRepository, repository.StoreRepository, repository.CustodyLogRepository, repository.CustodyHandshakeTokenRepository),
 		CourierGoodnessService:   NewCourierGoodnessService(repository.OrderRepository),
-		AdminCustodyService:      NewAdminCustodyService(repository.OrderRepository, repository.RequestRepository, repository.CustodyLogRepository, repository.CustodyHandshakeTokenRepository, repository.DeliveryVerificationRepository, pointService),
+		AdminCustodyService:      NewAdminCustodyService(repository.OrderRepository, repository.OrderItemRepository, repository.RequestRepository, repository.ItemRepository, repository.UserRepository, repository.CustodyLogRepository, repository.CustodyHandshakeTokenRepository, repository.DeliveryVerificationRepository, repository.DistributionProofRepository, repository.RequestSupplementalNeedRepository, pointService, supabase),
 	}
 }
