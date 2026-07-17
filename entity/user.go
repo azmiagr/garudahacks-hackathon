@@ -19,6 +19,7 @@ type User struct {
 
 	AdminProfile          AdminProfile           `json:"admin_profile" gorm:"foreignKey:UserID;references:UserID;constraint:onDelete:CASCADE"`
 	DonorProfile          DonorProfile           `json:"donor_profile" gorm:"foreignKey:UserID;references:UserID;constraint:onDelete:CASCADE"`
+	CourierProfile        CourierProfile         `json:"courier_profile" gorm:"foreignKey:UserID;references:UserID;constraint:onDelete:CASCADE"`
 	PointAccount          PointAccount           `json:"point_account" gorm:"foreignKey:UserID;references:UserID;constraint:onDelete:CASCADE"`
 	PointTransactions     []PointTransaction     `json:"point_transactions" gorm:"foreignKey:UserID;references:UserID;constraint:onDelete:CASCADE"`
 	RewardClaims          []RewardClaim          `json:"reward_claims" gorm:"foreignKey:UserID;references:UserID;constraint:onDelete:CASCADE"`

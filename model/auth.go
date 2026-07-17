@@ -29,6 +29,12 @@ type GetDonorProfileParam struct {
 	PhoneNumber string    `json:"phone_number"`
 }
 
+type GetCourierProfileParam struct {
+	ProfileID uuid.UUID `json:"profile_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	NIK       string    `json:"nik"`
+}
+
 type RequestAdminRegisterOtpRequest struct {
 	Email string `json:"email" binding:"required,email"`
 	Role  string `json:"role"`
@@ -97,6 +103,33 @@ type CompleteDonorRegisterRequest struct {
 type CompleteDonorRegisterResponse struct {
 	Token string               `json:"token"`
 	User  RegisterUserResponse `json:"user"`
+}
+
+type CompleteCourierRegisterRequest struct {
+	RegistrationID    uuid.UUID `json:"registration_id" binding:"required"`
+	FullName          string    `json:"full_name" binding:"required"`
+	NIK               string    `json:"nik" binding:"required,len=16,numeric"`
+	VehicleType       string    `json:"vehicle_type" binding:"required"`
+	VehicleCapacityKG int       `json:"vehicle_capacity_kg"`
+	OperationalArea   string    `json:"operational_area" binding:"required"`
+	OperationRadiusKM int       `json:"operation_radius_km" binding:"required"`
+	WaiverAccepted    bool      `json:"waiver_accepted" binding:"required"`
+}
+
+type CompleteCourierRegisterResponse struct {
+	Token   string                  `json:"token"`
+	User    RegisterUserResponse    `json:"user"`
+	Courier CourierRegisterResponse `json:"courier"`
+}
+
+type CourierRegisterResponse struct {
+	ProfileID         uuid.UUID `json:"profile_id"`
+	UserID            uuid.UUID `json:"user_id"`
+	VehicleType       string    `json:"vehicle_type"`
+	VehicleCapacityKG int       `json:"vehicle_capacity_kg"`
+	OperationalArea   string    `json:"operational_area"`
+	OperationRadiusKM int       `json:"operation_radius_km"`
+	WaiverAccepted    bool      `json:"waiver_accepted"`
 }
 
 type RegisterUserResponse struct {

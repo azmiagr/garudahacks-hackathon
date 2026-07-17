@@ -36,6 +36,7 @@ func Migrate(db *gorm.DB) error {
 		&entity.RevokedToken{},
 		&entity.AdminProfile{},
 		&entity.DonorProfile{},
+		&entity.CourierProfile{},
 		&entity.PaymentTransactions{},
 		&entity.PointAccount{},
 		&entity.PointTransaction{},

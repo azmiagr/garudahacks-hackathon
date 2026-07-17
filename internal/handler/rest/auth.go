@@ -152,6 +152,23 @@ func (r *Rest) CompleteDonorRegister(c *gin.Context) {
 	response.Success(c, http.StatusCreated, "success to complete donor registration", result)
 }
 
+func (r *Rest) CompleteCourierRegister(c *gin.Context) {
+	var req model.CompleteCourierRegisterRequest
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "failed to bind request body", err)
+		return
+	}
+
+	result, err := r.service.AuthService.CompleteCourierRegister(req)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	response.Success(c, http.StatusCreated, "success to complete courier registration", result)
+}
+
 func (r *Rest) CompleteStoreRegister(c *gin.Context) {
 	req, err := bindCompleteStoreRegisterForm(c)
 	if err != nil {

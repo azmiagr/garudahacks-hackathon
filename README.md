@@ -241,7 +241,21 @@ All routes are namespaced under `/api/v1`. Currently implemented:
 | POST   | `/auth/register/admin/password`    | Set password for a verified admin registration                |
 | POST   | `/auth/register/admin/profile`     | Complete admin registration (NIK, affiliation, posko details) |
 | POST   | `/auth/register/donor/profile`     | Complete donor registration (phone number, preferences)       |
+| POST   | `/auth/register/courier/profile`   | Complete courier registration (NIK, vehicle, operation area, waiver) |
 | POST   | `/auth/register/store/profile`     | Complete store registration via `multipart/form-data`, including `ktp_image` upload |
+
+Courier registration JSON fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `registration_id` | UUID | yes | Verified registration session ID |
+| `full_name` | text | yes | Courier name matching KTP |
+| `nik` | text | yes | 16 digits, stored hashed |
+| `vehicle_type` | text | yes | `motor`, `mobil`, or `pick-up` |
+| `vehicle_capacity_kg` | number | no | Defaults to 50, 300, or 1000 by vehicle type |
+| `operational_area` | text | yes | Example: `Jakarta Timur` |
+| `operation_radius_km` | number | yes | Must be greater than 0 |
+| `waiver_accepted` | boolean | yes | Must be `true` |
 
 Store registration form fields:
 
