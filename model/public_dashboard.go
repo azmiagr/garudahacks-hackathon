@@ -172,6 +172,7 @@ type PublicTransparencySummary struct {
 }
 
 type MonthlyDisbursementRow struct {
+	Year  int     `json:"year"`
 	Month int     `json:"month"`
 	Total float64 `json:"total"`
 }
