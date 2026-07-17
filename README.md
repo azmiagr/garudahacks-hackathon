@@ -241,7 +241,26 @@ All routes are namespaced under `/api/v1`. Currently implemented:
 | POST   | `/auth/register/admin/password`    | Set password for a verified admin registration                |
 | POST   | `/auth/register/admin/profile`     | Complete admin registration (NIK, affiliation, posko details) |
 | POST   | `/auth/register/donor/profile`     | Complete donor registration (phone number, preferences)       |
-| POST   | `/auth/register/store/profile`     | Complete store registration and store profile setup           |
+| POST   | `/auth/register/store/profile`     | Complete store registration via `multipart/form-data`, including `ktp_image` upload |
+
+Store registration form fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `registration_id` | text / UUID | yes | Verified registration session ID |
+| `store_name` | text | yes | Store display name |
+| `owner_name` | text | yes | Store owner name |
+| `nib` | text | yes | Business number, normalized by the backend |
+| `npwp` | text | no | Tax identifier |
+| `ktp_image` | file | yes | Owner KTP image, max 5MB, uploaded to Supabase |
+| `bank_name` | text | no | Disbursement bank name |
+| `bank_account_no` | text | no | Disbursement account number |
+| `bank_account_name` | text | no | Account holder name |
+| `categories` / `categories[]` | repeated text | no | Example: `Sembako`, `Air mineral` |
+| `categories_json` | JSON array string | no | Alternative to repeated category fields |
+| `address` | text | yes | Store address |
+| `latitude` | number | yes | Store latitude from GPS |
+| `longitude` | number | yes | Store longitude from GPS |
 
 ### Admin (JWT + `admin` role required)
 

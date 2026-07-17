@@ -1,6 +1,10 @@
 package model
 
-import "github.com/google/uuid"
+import (
+	"mime/multipart"
+
+	"github.com/google/uuid"
+)
 
 type GetRegistrationSessionParam struct {
 	RegistrationID uuid.UUID `json:"registration_id"`
@@ -106,19 +110,20 @@ type RegisterUserResponse struct {
 }
 
 type CompleteStoreRegisterRequest struct {
-	RegistrationID  uuid.UUID `json:"registration_id" binding:"required"`
-	StoreName       string    `json:"store_name" binding:"required"`
-	OwnerName       string    `json:"owner_name" binding:"required"`
-	NIB             string    `json:"nib" binding:"required"`
-	NPWP            string    `json:"npwp"`
-	KTPImageURL     string    `json:"ktp_image_url"`
-	BankName        string    `json:"bank_name"`
-	BankAccountNo   string    `json:"bank_account_no"`
-	BankAccountName string    `json:"bank_account_name"`
-	Categories      []string  `json:"categories"`
-	Address         string    `json:"address" binding:"required"`
-	Latitude        float64   `json:"latitude" binding:"required"`
-	Longitude       float64   `json:"longitude" binding:"required"`
+	RegistrationID  uuid.UUID             `form:"registration_id" json:"registration_id" binding:"required"`
+	StoreName       string                `form:"store_name" json:"store_name" binding:"required"`
+	OwnerName       string                `form:"owner_name" json:"owner_name" binding:"required"`
+	NIB             string                `form:"nib" json:"nib" binding:"required"`
+	NPWP            string                `form:"npwp" json:"npwp"`
+	KTPImage        *multipart.FileHeader `form:"ktp_image" json:"-"`
+	BankName        string                `form:"bank_name" json:"bank_name"`
+	BankAccountNo   string                `form:"bank_account_no" json:"bank_account_no"`
+	BankAccountName string                `form:"bank_account_name" json:"bank_account_name"`
+	Categories      []string              `form:"categories" json:"categories"`
+	CategoriesJSON  string                `form:"categories_json" json:"categories_json"`
+	Address         string                `form:"address" json:"address" binding:"required"`
+	Latitude        float64               `form:"latitude" json:"latitude" binding:"required"`
+	Longitude       float64               `form:"longitude" json:"longitude" binding:"required"`
 }
 
 type CompleteStoreRegisterResponse struct {

@@ -19,6 +19,7 @@ import (
 	"github.com/azmiagr/garudahacks-hackathon/pkg/hash"
 	"github.com/azmiagr/garudahacks-hackathon/pkg/jwt"
 	"github.com/azmiagr/garudahacks-hackathon/pkg/mail"
+	"github.com/azmiagr/garudahacks-hackathon/pkg/supabase"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -30,6 +31,7 @@ const (
 	registerOtpExpiryDuration  = 10 * time.Minute
 	registerSessionDuration    = 30 * time.Minute
 	registerOtpExpiryInSeconds = 600
+	maxStoreKTPImageSize       = 5 * 1024 * 1024
 )
 
 type IAuthService interface {
@@ -56,6 +58,7 @@ type AuthService struct {
 	bcrypt                      appbcrypt.Interface
 	jwtAuth                     jwt.Interface
 	hasher                      hash.Interface
+	storage                     supabase.Interface
 	storeRepository             repository.IStoreRepository
 }
 
@@ -69,6 +72,7 @@ func NewAuthService(
 	bcrypt appbcrypt.Interface,
 	jwtAuth jwt.Interface,
 	hasher hash.Interface,
+	storage supabase.Interface,
 	storeRepository repository.IStoreRepository,
 ) IAuthService {
 	return &AuthService{
@@ -82,6 +86,7 @@ func NewAuthService(
 		bcrypt:                      bcrypt,
 		jwtAuth:                     jwtAuth,
 		hasher:                      hasher,
+		storage:                     storage,
 		storeRepository:             storeRepository,
 	}
 }
@@ -664,6 +669,24 @@ func (s *AuthService) CompleteStoreRegister(req model.CompleteStoreRegisterReque
 	if strings.TrimSpace(req.Address) == "" {
 		return nil, apperrors.BadRequest("address is required")
 	}
+	if req.KTPImage == nil {
+		return nil, apperrors.BadRequest("ktp_image is required")
+	}
+	if req.KTPImage.Size > maxStoreKTPImageSize {
+		return nil, apperrors.BadRequest("ktp_image size must not exceed 5MB")
+	}
+
+	ktpImageURL, err := s.storage.UploadFile(req.KTPImage)
+	if err != nil {
+		return nil, err
+	}
+
+	committed := false
+	defer func() {
+		if !committed && ktpImageURL != "" {
+			_ = supabase.DeleteFileIfPresent(s.storage, ktpImageURL)
+		}
+	}()
 
 	existingUser, err := s.userRepository.GetUser(tx, model.GetUserParam{
 		Email: session.Email,
@@ -710,7 +733,12 @@ func (s *AuthService) CompleteStoreRegister(req model.CompleteStoreRegisterReque
 		return nil, err
 	}
 
-	categoriesJSON, err := json.Marshal(req.Categories)
+	categories, err := normalizeStoreCategories(req.Categories, req.CategoriesJSON)
+	if err != nil {
+		return nil, err
+	}
+
+	categoriesJSON, err := json.Marshal(categories)
 	if err != nil {
 		return nil, err
 	}
@@ -721,7 +749,7 @@ func (s *AuthService) CompleteStoreRegister(req model.CompleteStoreRegisterReque
 		Name:            storeName,
 		BusinessNumber:  nib,
 		NPWP:            strings.TrimSpace(req.NPWP),
-		KTPImageURL:     strings.TrimSpace(req.KTPImageURL),
+		KTPImageURL:     ktpImageURL,
 		BankName:        strings.TrimSpace(req.BankName),
 		BankAccountNo:   strings.TrimSpace(req.BankAccountNo),
 		BankAccountName: strings.TrimSpace(req.BankAccountName),
@@ -750,6 +778,7 @@ func (s *AuthService) CompleteStoreRegister(req model.CompleteStoreRegisterReque
 	if err != nil {
 		return nil, err
 	}
+	committed = true
 
 	return &model.CompleteStoreRegisterResponse{
 		Token: token,
@@ -780,6 +809,37 @@ func normalizeBusinessNumber(value string) string {
 	value = strings.ReplaceAll(value, "-", "")
 	value = strings.ReplaceAll(value, ".", "")
 	return value
+}
+
+func normalizeStoreCategories(values []string, rawJSON string) ([]string, error) {
+	if strings.TrimSpace(rawJSON) != "" {
+		var parsed []string
+		if err := json.Unmarshal([]byte(rawJSON), &parsed); err != nil {
+			return nil, apperrors.BadRequest("categories_json must be a valid JSON array")
+		}
+		values = append(values, parsed...)
+	}
+
+	normalized := make([]string, 0, len(values))
+	seen := map[string]struct{}{}
+	for _, value := range values {
+		for _, part := range strings.Split(value, ",") {
+			category := strings.TrimSpace(part)
+			if category == "" {
+				continue
+			}
+
+			key := strings.ToLower(category)
+			if _, exists := seen[key]; exists {
+				continue
+			}
+
+			seen[key] = struct{}{}
+			normalized = append(normalized, category)
+		}
+	}
+
+	return normalized, nil
 }
 
 func validatePassword(password string) error {

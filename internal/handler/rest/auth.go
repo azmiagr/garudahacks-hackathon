@@ -2,10 +2,13 @@ package rest
 
 import (
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/azmiagr/garudahacks-hackathon/model"
 	"github.com/azmiagr/garudahacks-hackathon/pkg/response"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 func (r *Rest) Login(c *gin.Context) {
@@ -150,10 +153,9 @@ func (r *Rest) CompleteDonorRegister(c *gin.Context) {
 }
 
 func (r *Rest) CompleteStoreRegister(c *gin.Context) {
-	var req model.CompleteStoreRegisterRequest
-	err := c.ShouldBindJSON(&req)
+	req, err := bindCompleteStoreRegisterForm(c)
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "failed to bind request body", err)
+		response.Error(c, http.StatusBadRequest, "failed to bind request form", err)
 		return
 	}
 
@@ -164,4 +166,43 @@ func (r *Rest) CompleteStoreRegister(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusCreated, "success to complete store registration", result)
+}
+
+func bindCompleteStoreRegisterForm(c *gin.Context) (model.CompleteStoreRegisterRequest, error) {
+	registrationID, err := uuid.Parse(strings.TrimSpace(c.PostForm("registration_id")))
+	if err != nil {
+		return model.CompleteStoreRegisterRequest{}, err
+	}
+
+	latitude, err := strconv.ParseFloat(strings.TrimSpace(c.PostForm("latitude")), 64)
+	if err != nil {
+		return model.CompleteStoreRegisterRequest{}, err
+	}
+
+	longitude, err := strconv.ParseFloat(strings.TrimSpace(c.PostForm("longitude")), 64)
+	if err != nil {
+		return model.CompleteStoreRegisterRequest{}, err
+	}
+
+	ktpImage, _ := c.FormFile("ktp_image")
+
+	categories := append([]string{}, c.PostFormArray("categories")...)
+	categories = append(categories, c.PostFormArray("categories[]")...)
+
+	return model.CompleteStoreRegisterRequest{
+		RegistrationID:  registrationID,
+		StoreName:       c.PostForm("store_name"),
+		OwnerName:       c.PostForm("owner_name"),
+		NIB:             c.PostForm("nib"),
+		NPWP:            c.PostForm("npwp"),
+		KTPImage:        ktpImage,
+		BankName:        c.PostForm("bank_name"),
+		BankAccountNo:   c.PostForm("bank_account_no"),
+		BankAccountName: c.PostForm("bank_account_name"),
+		Categories:      categories,
+		CategoriesJSON:  c.PostForm("categories_json"),
+		Address:         c.PostForm("address"),
+		Latitude:        latitude,
+		Longitude:       longitude,
+	}, nil
 }
