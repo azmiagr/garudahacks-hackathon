@@ -184,7 +184,7 @@ func (r *OrderRepository) GetStoreOrderItems(tx *gorm.DB, orderID uuid.UUID) ([]
 func (r *OrderRepository) ClaimOrderForCourier(tx *gorm.DB, orderID uuid.UUID, courierID uuid.UUID) error {
 	result := tx.Model(&entity.Orders{}).
 		Where("order_id = ?", orderID).
-		Where("order_status = ?", entity.OrderStatusReadyForPickup).
+		Where("order_status IN ?", courierClaimableOrderStatuses()).
 		Where("courier_id = ?", uuid.Nil).
 		Update("courier_id", courierID)
 	if result.Error != nil {
@@ -424,14 +424,28 @@ func applyCourierTaskFilter(query *gorm.DB, param model.CourierTaskListRepositor
 	switch param.Status {
 	case "mine":
 		return query.Where("o.courier_id = ?", param.CourierID).
-			Where("o.order_status IN ?", []string{
-				entity.OrderStatusReadyForPickup,
-				entity.OrderStatusPickedUp,
-				entity.OrderStatusInTransit,
-			})
+			Where("o.order_status IN ?", courierActiveOrderStatuses())
 	default:
-		return query.Where("o.order_status = ?", entity.OrderStatusReadyForPickup).
+		return query.Where("o.order_status IN ?", courierClaimableOrderStatuses()).
 			Where("o.courier_id = ?", uuid.Nil)
+	}
+}
+
+func courierClaimableOrderStatuses() []string {
+	return []string{
+		entity.OrderStatusAccepted,
+		entity.OrderStatusPreparing,
+		entity.OrderStatusReadyForPickup,
+	}
+}
+
+func courierActiveOrderStatuses() []string {
+	return []string{
+		entity.OrderStatusAccepted,
+		entity.OrderStatusPreparing,
+		entity.OrderStatusReadyForPickup,
+		entity.OrderStatusPickedUp,
+		entity.OrderStatusInTransit,
 	}
 }
 
