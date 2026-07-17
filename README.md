@@ -283,7 +283,56 @@ Store registration form fields:
 | GET    | `/admin/dashboard`            | Admin home dashboard: metrics/summary for the admin's posko |
 | GET    | `/admin/profile`              | Admin profile (NIK, affiliation, aggregated report metrics) |
 | POST   | `/admin/events`               | Create a disaster event/report tied to the admin's posko    |
+| GET    | `/admin/orders/:order_id/receiving` | Get receive/distribution checklist and uploaded proof progress |
+| POST   | `/admin/orders/:order_id/supplemental-needs` | Add follow-up needs before completing courier receive/distribution flow |
 | POST   | `/admin/custody/post-handoff` | Verify courier-to-posko handoff with QR/PIN custody data    |
+| POST   | `/admin/orders/:order_id/distribution-proofs` | Upload one live-camera distribution photo per order item type |
+| POST   | `/admin/orders/:order_id/complete-distribution` | Complete distribution after all item proofs are uploaded |
+
+Admin courier receive/distribution flow:
+
+1. `GET /admin/orders/:order_id/receiving` to render item checklist and proof progress.
+2. Optional `POST /admin/orders/:order_id/supplemental-needs` before scan.
+3. `POST /admin/custody/post-handoff` with courier QR/PIN to move custody to posko (`delivered`).
+4. `POST /admin/orders/:order_id/distribution-proofs` once per distinct item type in the order.
+5. `POST /admin/orders/:order_id/complete-distribution` to lock the final ledger and move order to `completed`.
+
+Supplemental needs JSON:
+
+```json
+{
+  "reason": "Banjir susulan semalam - 40 KK tambahan mengungsi.",
+  "reserved_amount_applied": 640000,
+  "items": [
+    {
+      "name": "Air mineral",
+      "description": "dus",
+      "price": 42000,
+      "quantity_needed": 60
+    },
+    {
+      "name": "Selimut",
+      "description": "pcs",
+      "price": 90000,
+      "quantity_needed": 40
+    }
+  ]
+}
+```
+
+Distribution proof form fields (`multipart/form-data`):
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `item_id` | UUID | yes | Must be one of the order's item types |
+| `photo` | file | yes | Max 5MB, uploaded to Supabase |
+| `recipient_note` | text | no | Example: `Dibagikan ke 120 KK` |
+| `distributed_quantity` | number | no | Quantity documented in this photo |
+| `latitude` | number | yes | Camera GPS latitude |
+| `longitude` | number | yes | Camera GPS longitude |
+| `blur_face_enabled` | boolean | no | Defaults to `true` |
+| `captured_from_camera` | boolean | yes | Must be `true`; gallery uploads are rejected |
+| `captured_at` | RFC3339 datetime | no | Defaults to server time |
 
 ### Donor (JWT + `donor` role required)
 

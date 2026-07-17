@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -850,7 +851,12 @@ func (s *AuthService) CompleteStoreRegister(req model.CompleteStoreRegisterReque
 		return nil, apperrors.BadRequest("ktp_image size must not exceed 5MB")
 	}
 
-	ktpImageURL, err := s.storage.UploadFile(req.KTPImage)
+	var ktpImageURL string
+	if strings.EqualFold(filepath.Ext(req.KTPImage.Filename), ".pdf") {
+		ktpImageURL, err = s.storage.UploadPDF(req.KTPImage)
+	} else {
+		ktpImageURL, err = s.storage.UploadFile(req.KTPImage)
+	}
 	if err != nil {
 		return nil, err
 	}

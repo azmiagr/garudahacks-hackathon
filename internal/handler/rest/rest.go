@@ -64,6 +64,10 @@ func (r *Rest) MountEndpoint() {
 	admin.GET("/dashboard", r.GetAdminDashboardHome)
 	admin.GET("/profile", r.GetAdminProfile)
 	admin.POST("/events", r.CreateAdminEvent)
+	admin.GET("/orders/:order_id/receiving", r.GetAdminReceiveOrderDetail)
+	admin.POST("/orders/:order_id/supplemental-needs", r.CreateAdminSupplementalNeed)
+	admin.POST("/orders/:order_id/distribution-proofs", r.UploadAdminDistributionProof)
+	admin.POST("/orders/:order_id/complete-distribution", r.CompleteAdminDistribution)
 	admin.POST("/custody/post-handoff", r.SubmitAdminPostHandoff)
 
 	donor := baseURL.Group("/donor")
