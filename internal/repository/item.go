@@ -14,6 +14,7 @@ type IItemRepository interface {
 	GetItemsByRequestID(tx *gorm.DB, param model.GetItemParam) ([]entity.Items, error)
 	GetDonorPostDetailItems(tx *gorm.DB, requestID uuid.UUID) ([]model.DonorPostDetailItemRow, error)
 	IncrementQuantityNeeded(tx *gorm.DB, itemID uuid.UUID, quantity int, estimatedTotal float64) error
+	IncrementQuantityFulfilled(tx *gorm.DB, itemID uuid.UUID, quantity int) error
 }
 
 type ItemRepository struct {
@@ -87,4 +88,20 @@ func (r *ItemRepository) IncrementQuantityNeeded(tx *gorm.DB, itemID uuid.UUID, 
 			"quantity_needed": gorm.Expr("quantity_needed + ?", quantity),
 			"estimated_total": gorm.Expr("estimated_total + ?", estimatedTotal),
 		}).Error
+}
+
+func (r *ItemRepository) IncrementQuantityFulfilled(tx *gorm.DB, itemID uuid.UUID, quantity int) error {
+	if quantity <= 0 {
+		return nil
+	}
+
+	err := tx.Model(&entity.Items{}).
+		Where("item_id = ?", itemID).
+		Update("quantity_fulfilled", gorm.Expr("quantity_fulfilled + ?", quantity)).
+		Error
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
