@@ -470,6 +470,17 @@ Copy `.env.example` to `.env` and fill in the values before running.
 
    On startup, the app connects to MariaDB, runs `AutoMigrate` for all entities, and seeds the `admin`, `donor`, `store`, and `relawan` roles plus a default admin user (`admin@example.com` / `admin123` — change this before any real deployment).
 
+   Demo/staging environments may provide the following exploration accounts. All use the password `Admin123!`.
+
+   | Role | Email |
+   | ---- | ----- |
+   | Donor | `dummy.donatur@example.com` |
+   | Store | `dummy.toko@example.com` |
+   | Courier | `dummy.kurir@example.com` |
+   | Admin | `dummy.admin@example.com` |
+
+   These accounts are intended only for demos, judging, and local/staging exploration. Remove, rotate, or disable them before any production deployment.
+
    To run with Docker Compose:
 
    ```bash
