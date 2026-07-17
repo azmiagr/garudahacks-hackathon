@@ -17,6 +17,7 @@ import (
 
 const (
 	pointSourceDonationPayment = "donation_payment"
+	pointSourceCourierDelivery = "courier_delivery"
 	pointSourceRewardClaim     = "reward_claim"
 
 	pointTransactionEarn   = "earn"
@@ -24,8 +25,10 @@ const (
 
 	rewardClaimStatusClaimed = "claimed"
 
-	pointsPerRupiahDivider = 1000
-	defaultPointExpiryDays = 365
+	pointsPerRupiahDivider   = 1000
+	pointsPerCourierDelivery = 100
+	pointsPerCourierKm       = 10
+	defaultPointExpiryDays   = 365
 )
 
 type IPointService interface {
@@ -34,6 +37,7 @@ type IPointService interface {
 	GetRewards(user *entity.User, param model.RewardQueryParam) (*model.RewardListResponse, error)
 	ClaimReward(user *entity.User, req model.ClaimRewardRequest) (*model.RewardClaimResponse, error)
 	AwardDonationPaymentPoints(tx *gorm.DB, payment *entity.PaymentTransactions) error
+	AwardCourierDeliveryPoints(tx *gorm.DB, order *entity.Orders) (int64, error)
 }
 
 type PointService struct {
@@ -285,8 +289,66 @@ func (s *PointService) AwardDonationPaymentPoints(tx *gorm.DB, payment *entity.P
 	return s.pointRepository.AddEarnedPoints(tx, account.PointAccountID, points)
 }
 
+func (s *PointService) AwardCourierDeliveryPoints(tx *gorm.DB, order *entity.Orders) (int64, error) {
+	if order == nil || order.CourierID == uuid.Nil {
+		return 0, nil
+	}
+
+	points := calculateCourierDeliveryPoints(order.DeliveryDistanceKm)
+	if points <= 0 {
+		return 0, nil
+	}
+
+	sourceID := order.OrderID.String()
+	exists, err := s.pointRepository.HasPointTransactionSource(tx, pointSourceCourierDelivery, sourceID)
+	if err != nil {
+		return 0, err
+	}
+	if exists {
+		return 0, nil
+	}
+
+	account, err := s.pointRepository.GetOrCreatePointAccount(tx, order.CourierID)
+	if err != nil {
+		return 0, err
+	}
+
+	expiresAt := time.Now().UTC().AddDate(0, 0, defaultPointExpiryDays)
+	pointTransaction := &entity.PointTransaction{
+		PointTransactionID: uuid.New(),
+		PointAccountID:     account.PointAccountID,
+		UserID:             order.CourierID,
+		Points:             points,
+		TransactionType:    pointTransactionEarn,
+		SourceType:         pointSourceCourierDelivery,
+		SourceID:           sourceID,
+		Description:        fmt.Sprintf("Poin pengantaran #%s", order.OrderCode),
+		ExpiresAt:          &expiresAt,
+		CreatedAt:          time.Now().UTC(),
+	}
+
+	err = s.pointRepository.CreatePointTransaction(tx, pointTransaction)
+	if err != nil {
+		return 0, err
+	}
+
+	if err := s.pointRepository.AddEarnedPoints(tx, account.PointAccountID, points); err != nil {
+		return 0, err
+	}
+
+	return points, nil
+}
+
 func calculateDonationPoints(amount float64) int64 {
 	return int64(math.Floor(amount / pointsPerRupiahDivider))
+}
+
+func calculateCourierDeliveryPoints(distanceKm *float64) int64 {
+	points := int64(pointsPerCourierDelivery)
+	if distanceKm != nil && *distanceKm > 0 {
+		points += int64(math.Floor(*distanceKm * pointsPerCourierKm))
+	}
+	return points
 }
 
 func buildRewardItems(rewards []entity.Reward, activePoints int64) []model.RewardItem {

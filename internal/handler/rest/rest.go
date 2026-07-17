@@ -60,6 +60,7 @@ func (r *Rest) MountEndpoint() {
 	admin.GET("/dashboard", r.GetAdminDashboardHome)
 	admin.GET("/profile", r.GetAdminProfile)
 	admin.POST("/events", r.CreateAdminEvent)
+	admin.POST("/custody/post-handoff", r.SubmitAdminPostHandoff)
 
 	donor := baseURL.Group("/donor")
 	donor.Use(r.middleware.AuthenticateUser, r.middleware.OnlyDonor())
@@ -92,7 +93,10 @@ func (r *Rest) MountEndpoint() {
 	courier.POST("/tasks/:order_id/claim", r.ClaimCourierTask)
 	courier.POST("/tasks/:order_id/location", r.UpdateCourierLocation)
 	courier.POST("/tasks/:order_id/arrived", r.MarkCourierArrived)
+	courier.POST("/tasks/:order_id/arrived-post", r.MarkCourierArrivedAtPost)
+	courier.POST("/tasks/:order_id/handoff-token", r.GenerateCourierHandoffToken)
 	courier.POST("/custody/store-handoff", r.SubmitCourierStoreHandoff)
+	courier.GET("/goodness", r.GetCourierGoodness)
 
 }
 

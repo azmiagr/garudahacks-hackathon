@@ -44,6 +44,7 @@ type StoreCustodyService struct {
 	storeRepository          repository.IStoreRepository
 	custodyLogRepository     repository.ICustodyLogRepository
 	handshakeTokenRepository repository.ICustodyHandshakeTokenRepository
+	requestRepository        repository.IRequestRepository
 }
 
 func NewStoreCustodyService(
@@ -51,6 +52,7 @@ func NewStoreCustodyService(
 	storeRepository repository.IStoreRepository,
 	custodyLogRepository repository.ICustodyLogRepository,
 	handshakeTokenRepository repository.ICustodyHandshakeTokenRepository,
+	requestRepository repository.IRequestRepository,
 ) IStoreCustodyService {
 	return &StoreCustodyService{
 		db:                       mariadb.Connection,
@@ -58,6 +60,7 @@ func NewStoreCustodyService(
 		storeRepository:          storeRepository,
 		custodyLogRepository:     custodyLogRepository,
 		handshakeTokenRepository: handshakeTokenRepository,
+		requestRepository:        requestRepository,
 	}
 }
 
@@ -177,7 +180,7 @@ func (s *StoreCustodyService) MarkOrderReady(user *entity.User, req model.StoreO
 		return nil, err
 	}
 
-	resp, err := s.createStoreHandoffToken(tx, req.OrderID, store.OwnerID, now)
+	resp, err := s.createHandshakeToken(tx, req.OrderID, store.OwnerID, entity.CustodyStageStoreToCourier, now)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +220,7 @@ func (s *StoreCustodyService) GenerateStoreHandoffToken(user *entity.User, req m
 		return nil, apperrors.BadRequest("order is not ready for pickup")
 	}
 
-	resp, err := s.createStoreHandoffToken(tx, order.OrderID, store.OwnerID, time.Now().UTC())
+	resp, err := s.createHandshakeToken(tx, order.OrderID, store.OwnerID, entity.CustodyStageStoreToCourier, time.Now().UTC())
 	if err != nil {
 		return nil, err
 	}
@@ -321,6 +324,17 @@ func (s *StoreCustodyService) SubmitHandoff(user *entity.User, req model.SubmitC
 	order.OrderStatus = entity.OrderStatusInTransit
 	order.PickedUpAt = &capturedAt
 	order.UpdatedAt = time.Now().UTC()
+
+	lockContext, err := s.requestRepository.GetDonationLockContext(tx, order.RequestID)
+	if err == nil {
+		distanceKm := calculateDistanceMeters(store.Latitude, store.Longitude, lockContext.Latitude, lockContext.Longitude) / 1000
+		deadline := capturedAt.Add(2 * time.Duration(estimateTravelMinutes(distanceKm)*float64(time.Minute)))
+		order.DeliveryDistanceKm = &distanceKm
+		order.DeliveryDeadlineAt = &deadline
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
 	if err := s.orderRepository.UpdateOrder(tx, order); err != nil {
 		return nil, err
 	}
@@ -355,7 +369,11 @@ func (s *StoreCustodyService) getOwnedStore(tx *gorm.DB, ownerID uuid.UUID) (*en
 	return store, nil
 }
 
-func (s *StoreCustodyService) createStoreHandoffToken(tx *gorm.DB, orderID uuid.UUID, presentedBy uuid.UUID, now time.Time) (*model.StoreHandoffTokenResponse, error) {
+func (s *StoreCustodyService) createHandshakeToken(tx *gorm.DB, orderID uuid.UUID, presentedBy uuid.UUID, stage string, now time.Time) (*model.StoreHandoffTokenResponse, error) {
+	return createHandshakeToken(tx, s.handshakeTokenRepository, orderID, presentedBy, stage, now)
+}
+
+func createHandshakeToken(tx *gorm.DB, handshakeTokenRepository repository.ICustodyHandshakeTokenRepository, orderID uuid.UUID, presentedBy uuid.UUID, stage string, now time.Time) (*model.StoreHandoffTokenResponse, error) {
 	tokenID := uuid.New()
 	nonce := strings.ReplaceAll(uuid.NewString(), "-", "")
 	expiresAt := now.Add(custodyTokenTTLSeconds * time.Second)
@@ -365,11 +383,11 @@ func (s *StoreCustodyService) createStoreHandoffToken(tx *gorm.DB, orderID uuid.
 		return nil, err
 	}
 
-	payload := buildStoreHandoffQRPayload(tokenID, orderID, presentedBy, nonce, expiresAt)
+	payload := buildHandshakeQRPayload(tokenID, orderID, presentedBy, stage, nonce, expiresAt)
 	token := &entity.CustodyHandshakeToken{
 		TokenID:         tokenID,
 		OrderID:         orderID,
-		HandoffStage:    entity.CustodyStageStoreToCourier,
+		HandoffStage:    stage,
 		PresentedBy:     presentedBy,
 		QRPayloadHash:   hashTokenValue(payload),
 		PINHash:         hashTokenValue(pin),
@@ -379,14 +397,14 @@ func (s *StoreCustodyService) createStoreHandoffToken(tx *gorm.DB, orderID uuid.
 		CacheValidUntil: cacheValidUntil,
 		CreatedAt:       now,
 	}
-	if err := s.handshakeTokenRepository.CreateToken(tx, token); err != nil {
+	if err := handshakeTokenRepository.CreateToken(tx, token); err != nil {
 		return nil, err
 	}
 
 	return &model.StoreHandoffTokenResponse{
 		OrderID:              orderID,
 		TokenID:              tokenID,
-		HandoffStage:         entity.CustodyStageStoreToCourier,
+		HandoffStage:         stage,
 		QRPayload:            payload,
 		FallbackPIN:          pin,
 		ExpiresAt:            expiresAt,
@@ -397,20 +415,24 @@ func (s *StoreCustodyService) createStoreHandoffToken(tx *gorm.DB, orderID uuid.
 }
 
 func (s *StoreCustodyService) getHandshakeTokenForUpdate(tx *gorm.DB, req model.SubmitCustodyHandshakeRequest, method string) (*entity.CustodyHandshakeToken, error) {
+	return getHandshakeTokenForStageUpdate(tx, s.handshakeTokenRepository, req, method, entity.CustodyStageStoreToCourier)
+}
+
+func getHandshakeTokenForStageUpdate(tx *gorm.DB, handshakeTokenRepository repository.ICustodyHandshakeTokenRepository, req model.SubmitCustodyHandshakeRequest, method string, stage string) (*entity.CustodyHandshakeToken, error) {
 	now := time.Now().UTC()
 	if method == entity.HandshakeMethodQR {
 		payload := strings.TrimSpace(req.QRPayload)
 		if payload == "" {
 			return nil, apperrors.BadRequest("qr_payload is required")
 		}
-		return s.handshakeTokenRepository.GetActiveTokenByQRHashForUpdate(tx, hashTokenValue(payload), now)
+		return handshakeTokenRepository.GetActiveTokenByQRHashForUpdate(tx, hashTokenValue(payload), now)
 	}
 
 	pin := strings.TrimSpace(req.FallbackPIN)
 	if pin == "" || req.OrderID == uuid.Nil {
 		return nil, apperrors.BadRequest("order_id and fallback_pin are required")
 	}
-	return s.handshakeTokenRepository.GetActiveTokenByPINHashForUpdate(tx, req.OrderID, entity.CustodyStageStoreToCourier, hashTokenValue(pin), now)
+	return handshakeTokenRepository.GetActiveTokenByPINHashForUpdate(tx, req.OrderID, stage, hashTokenValue(pin), now)
 }
 
 type appendCustodyLogParam struct {
@@ -428,7 +450,11 @@ type appendCustodyLogParam struct {
 }
 
 func (s *StoreCustodyService) appendCustodyLog(tx *gorm.DB, param appendCustodyLogParam) (*entity.CustodyLogs, error) {
-	latestLog, err := s.custodyLogRepository.GetLatestCustodyLogByOrderForUpdate(tx, param.OrderID)
+	return appendCustodyLog(tx, s.custodyLogRepository, param)
+}
+
+func appendCustodyLog(tx *gorm.DB, custodyLogRepository repository.ICustodyLogRepository, param appendCustodyLogParam) (*entity.CustodyLogs, error) {
+	latestLog, err := custodyLogRepository.GetLatestCustodyLogByOrderForUpdate(tx, param.OrderID)
 
 	sequence := 1
 	prevHash := "GENESIS"
@@ -467,7 +493,7 @@ func (s *StoreCustodyService) appendCustodyLog(tx *gorm.DB, param appendCustodyL
 	}
 	log.CurrentHash = buildCustodyServiceHash(*log)
 
-	if err := s.custodyLogRepository.CreateCustodyLog(tx, log); err != nil {
+	if err := custodyLogRepository.CreateCustodyLog(tx, log); err != nil {
 		return nil, err
 	}
 
@@ -560,12 +586,12 @@ func normalizeStoreOrderServiceOffset(offset int) int {
 	return offset
 }
 
-func buildStoreHandoffQRPayload(tokenID uuid.UUID, orderID uuid.UUID, presentedBy uuid.UUID, nonce string, expiresAt time.Time) string {
+func buildHandshakeQRPayload(tokenID uuid.UUID, orderID uuid.UUID, presentedBy uuid.UUID, stage string, nonce string, expiresAt time.Time) string {
 	body := map[string]string{
 		"token_id":     tokenID.String(),
 		"order_id":     orderID.String(),
 		"presented_by": presentedBy.String(),
-		"stage":        entity.CustodyStageStoreToCourier,
+		"stage":        stage,
 		"nonce":        nonce,
 		"expires_at":   expiresAt.UTC().Format(time.RFC3339),
 	}

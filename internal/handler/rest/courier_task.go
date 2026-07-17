@@ -124,6 +124,46 @@ func (r *Rest) MarkCourierArrived(c *gin.Context) {
 	response.Success(c, http.StatusOK, "success to mark courier arrived", result)
 }
 
+func (r *Rest) MarkCourierArrivedAtPost(c *gin.Context) {
+	user, ok := helper.GetLoginUserFromContext(c)
+	if !ok {
+		return
+	}
+
+	orderID, ok := bindOrderIDParam(c)
+	if !ok {
+		return
+	}
+
+	result, err := r.service.CourierTaskService.MarkArrivedAtPost(user, orderID)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	response.Success(c, http.StatusOK, "success to mark courier arrived at post", result)
+}
+
+func (r *Rest) GenerateCourierHandoffToken(c *gin.Context) {
+	user, ok := helper.GetLoginUserFromContext(c)
+	if !ok {
+		return
+	}
+
+	orderID, ok := bindOrderIDParam(c)
+	if !ok {
+		return
+	}
+
+	result, err := r.service.CourierTaskService.GenerateHandoffToken(user, orderID)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	response.Success(c, http.StatusOK, "success to generate courier handoff token", result)
+}
+
 func bindCourierTaskListParam(c *gin.Context) model.CourierTaskListParam {
 	limit, _ := strconv.Atoi(c.Query("limit"))
 	offset, _ := strconv.Atoi(c.Query("offset"))

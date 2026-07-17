@@ -41,6 +41,9 @@ type Orders struct {
 	CourierLocationUpdatedAt *time.Time `json:"courier_location_updated_at" gorm:"type:datetime"`
 	ArrivedAt                *time.Time `json:"arrived_at" gorm:"type:datetime"`
 	PickupDeadlineAt         *time.Time `json:"pickup_deadline_at" gorm:"type:datetime"`
+	DeliveryDeadlineAt       *time.Time `json:"delivery_deadline_at" gorm:"type:datetime"`
+	ArrivedAtPostAt          *time.Time `json:"arrived_at_post_at" gorm:"type:datetime"`
+	DeliveryDistanceKm       *float64   `json:"delivery_distance_km" gorm:"type:decimal(10,2)"`
 
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`

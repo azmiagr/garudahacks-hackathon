@@ -56,5 +56,5 @@ func (m *middleware) OnlyStore() gin.HandlerFunc {
 }
 
 func (m *middleware) OnlyCourier() gin.HandlerFunc {
-	return m.OnlyRoles("relawan")
+	return m.OnlyRoles("relawan", "courier", "kurir")
 }

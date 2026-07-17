@@ -11,6 +11,7 @@ import (
 type IDeliveryVerificationRepository interface {
 	GetPublicDistributionProofs(tx *gorm.DB, param model.PublicDistributionParam) ([]model.PublicDistributionProofRow, error)
 	GetVerifiedFulfillmentRate(tx *gorm.DB, year int) (*model.VerifiedFulfillmentRateRow, error)
+	CreateDeliveryVerification(tx *gorm.DB, verification *entity.DeliveryVerification) error
 }
 
 type DeliveryVerificationRepository struct {
@@ -131,6 +132,15 @@ func (r *DeliveryVerificationRepository) GetVerifiedFulfillmentRate(tx *gorm.DB,
 	}
 
 	return &row, nil
+}
+
+func (r *DeliveryVerificationRepository) CreateDeliveryVerification(tx *gorm.DB, verification *entity.DeliveryVerification) error {
+	err := tx.Create(verification).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func normalizePublicDistributionLimit(limit int) int {

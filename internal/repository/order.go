@@ -26,6 +26,10 @@ type IOrderRepository interface {
 	GetCourierTaskDetail(tx *gorm.DB, param model.CourierTaskDetailRepositoryParam) (*model.CourierTaskRow, error)
 	UpdateCourierLocation(tx *gorm.DB, orderID uuid.UUID, courierID uuid.UUID, lat float64, lng float64, capturedAt time.Time) error
 	MarkCourierArrived(tx *gorm.DB, orderID uuid.UUID, courierID uuid.UUID, now time.Time) error
+	MarkCourierArrivedAtPost(tx *gorm.DB, orderID uuid.UUID, courierID uuid.UUID, now time.Time) error
+	GetCourierGoodnessStats(tx *gorm.DB, courierID uuid.UUID) (*model.CourierGoodnessStatsRow, error)
+	GetCourierDeliveryHistory(tx *gorm.DB, param model.CourierGoodnessParam) ([]model.CourierDeliveryHistoryRow, error)
+	CountCourierDeliveryHistory(tx *gorm.DB, param model.CourierGoodnessParam) (int64, error)
 }
 
 type OrderRepository struct {
@@ -225,7 +229,7 @@ func (r *OrderRepository) UpdateCourierLocation(tx *gorm.DB, orderID uuid.UUID, 
 	result := tx.Model(&entity.Orders{}).
 		Where("order_id = ?", orderID).
 		Where("courier_id = ?", courierID).
-		Where("order_status = ?", entity.OrderStatusReadyForPickup).
+		Where("order_status IN ?", []string{entity.OrderStatusReadyForPickup, entity.OrderStatusInTransit}).
 		Updates(map[string]interface{}{
 			"courier_latitude":            lat,
 			"courier_longitude":           lng,
@@ -261,6 +265,103 @@ func (r *OrderRepository) MarkCourierArrived(tx *gorm.DB, orderID uuid.UUID, cou
 	return nil
 }
 
+func (r *OrderRepository) MarkCourierArrivedAtPost(tx *gorm.DB, orderID uuid.UUID, courierID uuid.UUID, now time.Time) error {
+	result := tx.Model(&entity.Orders{}).
+		Where("order_id = ?", orderID).
+		Where("courier_id = ?", courierID).
+		Where("order_status = ?", entity.OrderStatusInTransit).
+		Updates(map[string]interface{}{
+			"arrived_at_post_at": now,
+			"updated_at":         now,
+		})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+
+	return nil
+}
+
+func (r *OrderRepository) GetCourierGoodnessStats(tx *gorm.DB, courierID uuid.UUID) (*model.CourierGoodnessStatsRow, error) {
+	var row model.CourierGoodnessStatsRow
+
+	err := tx.Table("orders AS o").
+		Select(`
+			COUNT(DISTINCT CASE WHEN o.order_status IN ('delivered', 'completed') THEN o.order_id END) AS delivery_count,
+			COALESCE(SUM(CASE WHEN o.order_status IN ('delivered', 'completed') THEN o.delivery_distance_km ELSE 0 END), 0) AS total_distance_km,
+			COUNT(DISTINCT CASE WHEN o.order_status = 'disputed' THEN o.order_id END) AS dispute_count,
+			MIN(CASE WHEN o.order_status IN ('delivered', 'completed') THEN o.delivered_at END) AS first_delivery_at,
+			CASE
+				WHEN COUNT(DISTINCT CASE WHEN o.order_status IN ('delivered', 'completed') THEN o.order_id END) = 0 THEN 0
+				ELSE ROUND(4.5 + LEAST(COUNT(DISTINCT CASE WHEN o.order_status IN ('delivered', 'completed') THEN o.order_id END), 50) / 125, 1)
+			END AS reputation_score
+		`).
+		Where("o.courier_id = ?", courierID).
+		Scan(&row).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &row, nil
+}
+
+func (r *OrderRepository) GetCourierDeliveryHistory(tx *gorm.DB, param model.CourierGoodnessParam) ([]model.CourierDeliveryHistoryRow, error) {
+	var rows []model.CourierDeliveryHistoryRow
+
+	err := buildCourierDeliveryHistoryQuery(tx, param).
+		Order("o.delivered_at DESC").
+		Limit(normalizeStoreGoodnessLimit(param.Limit)).
+		Offset(normalizeStoreGoodnessOffset(param.Offset)).
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return rows, nil
+}
+
+func (r *OrderRepository) CountCourierDeliveryHistory(tx *gorm.DB, param model.CourierGoodnessParam) (int64, error) {
+	var count int64
+
+	err := buildCourierDeliveryHistoryQuery(tx, param).
+		Distinct("o.order_id").
+		Count(&count).Error
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func buildCourierDeliveryHistoryQuery(tx *gorm.DB, param model.CourierGoodnessParam) *gorm.DB {
+	query := tx.Table("orders AS o").
+		Select(`
+			o.order_id,
+			o.order_code,
+			p.name AS post_name,
+			de.name AS disaster_name,
+			COALESCE(item_summary.item_count, 0) AS item_count,
+			o.total_amount,
+			o.delivery_distance_km,
+			o.delivered_at
+		`).
+		Joins("JOIN requests AS req ON req.request_id = o.request_id").
+		Joins("JOIN disaster_reports AS dr ON dr.report_id = req.report_id").
+		Joins("JOIN disaster_events AS de ON de.event_id = dr.event_id").
+		Joins("JOIN posts AS p ON p.post_id = dr.post_id").
+		Joins("LEFT JOIN (?) AS item_summary ON item_summary.order_id = o.order_id", buildCourierTaskItemSummarySubquery(tx)).
+		Where("o.courier_id = ?", param.CourierID).
+		Where("o.order_status IN ?", []string{entity.OrderStatusDelivered, entity.OrderStatusCompleted})
+
+	if param.Year > 0 {
+		query = query.Where("YEAR(o.delivered_at) = ?", param.Year)
+	}
+
+	return query
+}
+
 func buildCourierTaskItemSummarySubquery(tx *gorm.DB) *gorm.DB {
 	return tx.Table("order_items").
 		Select("order_id, COUNT(order_item_id) AS item_count, COALESCE(SUM(quantity), 0) AS total_quantity").
@@ -290,6 +391,7 @@ func buildCourierTaskBaseQuery(tx *gorm.DB) *gorm.DB {
 			p.address AS post_address,
 			p.latitude AS post_latitude,
 			p.longitude AS post_longitude,
+			COALESCE(p.phone_number, '') AS post_phone_number,
 			COALESCE(post_owner.name, '') AS post_contact_name,
 			COALESCE(courier.name, '') AS courier_name,
 			COALESCE(item_summary.item_count, 0) AS item_count,
@@ -299,9 +401,12 @@ func buildCourierTaskBaseQuery(tx *gorm.DB) *gorm.DB {
 			o.courier_location_updated_at,
 			o.arrived_at,
 			o.pickup_deadline_at,
+			o.delivery_deadline_at,
+			o.arrived_at_post_at,
 			o.accepted_at,
 			o.ready_at,
 			o.picked_up_at,
+			o.delivered_at,
 			o.created_at,
 			o.updated_at
 		`).
