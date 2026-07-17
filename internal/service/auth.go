@@ -42,6 +42,7 @@ type IAuthService interface {
 	SetAdminRegisterPassword(req model.SetAdminRegisterPasswordRequest) (*model.SetAdminRegisterPasswordResponse, error)
 	CompleteAdminRegister(req model.CompleteAdminRegisterRequest) (*model.CompleteAdminRegisterResponse, error)
 	CompleteDonorRegister(req model.CompleteDonorRegisterRequest) (*model.CompleteDonorRegisterResponse, error)
+	CompleteCourierRegister(req model.CompleteCourierRegisterRequest) (*model.CompleteCourierRegisterResponse, error)
 	CompleteStoreRegister(req model.CompleteStoreRegisterRequest) (*model.CompleteStoreRegisterResponse, error)
 	Logout(token string) (*model.LogoutResponse, error)
 	IsTokenRevoked(token string) (bool, error)
@@ -54,6 +55,7 @@ type AuthService struct {
 	registrationRepository      repository.IRegistrationRepository
 	adminPoskoProfileRepository repository.IAdminPoskoProfileRepository
 	donorProfileRepository      repository.IDonorProfileRepository
+	courierProfileRepository    repository.ICourierProfileRepository
 	revokedTokenRepository      repository.IRevokedTokenRepository
 	bcrypt                      appbcrypt.Interface
 	jwtAuth                     jwt.Interface
@@ -68,6 +70,7 @@ func NewAuthService(
 	registrationRepository repository.IRegistrationRepository,
 	adminPoskoProfileRepository repository.IAdminPoskoProfileRepository,
 	donorProfileRepository repository.IDonorProfileRepository,
+	courierProfileRepository repository.ICourierProfileRepository,
 	revokedTokenRepository repository.IRevokedTokenRepository,
 	bcrypt appbcrypt.Interface,
 	jwtAuth jwt.Interface,
@@ -82,6 +85,7 @@ func NewAuthService(
 		registrationRepository:      registrationRepository,
 		adminPoskoProfileRepository: adminPoskoProfileRepository,
 		donorProfileRepository:      donorProfileRepository,
+		courierProfileRepository:    courierProfileRepository,
 		revokedTokenRepository:      revokedTokenRepository,
 		bcrypt:                      bcrypt,
 		jwtAuth:                     jwtAuth,
@@ -92,6 +96,7 @@ func NewAuthService(
 }
 
 const storeRoleName = "store"
+const courierRoleName = "relawan"
 
 func (s *AuthService) Login(req model.LoginRequest) (*model.LoginResponse, error) {
 	email := strings.ToLower(strings.TrimSpace(req.Email))
@@ -623,6 +628,175 @@ func (s *AuthService) CompleteDonorRegister(req model.CompleteDonorRegisterReque
 	}, nil
 }
 
+func (s *AuthService) CompleteCourierRegister(req model.CompleteCourierRegisterRequest) (*model.CompleteCourierRegisterResponse, error) {
+	tx := s.db.Begin()
+	defer tx.Rollback()
+
+	session, err := s.registrationRepository.GetRegistrationSession(tx, model.GetRegistrationSessionParam{
+		RegistrationID: req.RegistrationID,
+	})
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.NotFound("registration session not found")
+		}
+		return nil, err
+	}
+
+	if session.ExpiresAt.Before(time.Now().UTC()) {
+		return nil, apperrors.BadRequest("registration session expired")
+	}
+
+	if session.OtpVerifiedAt == nil {
+		return nil, apperrors.BadRequest("otp must be verified before completing registration")
+	}
+
+	if session.PasswordHash == "" {
+		return nil, apperrors.BadRequest("password must be created before completing registration")
+	}
+
+	if session.RoleName != courierRoleName {
+		return nil, apperrors.BadRequest("registration session is not for courier")
+	}
+
+	fullName := strings.TrimSpace(req.FullName)
+	if fullName == "" {
+		return nil, apperrors.BadRequest("full name is required")
+	}
+
+	err = validateNIK(req.NIK)
+	if err != nil {
+		return nil, err
+	}
+
+	vehicleType, err := normalizeCourierVehicleType(req.VehicleType)
+	if err != nil {
+		return nil, err
+	}
+
+	vehicleCapacityKG := req.VehicleCapacityKG
+	if vehicleCapacityKG < 0 {
+		return nil, apperrors.BadRequest("vehicle capacity must not be negative")
+	}
+	if vehicleCapacityKG == 0 {
+		vehicleCapacityKG = defaultCourierVehicleCapacityKG(vehicleType)
+	}
+
+	operationalArea := strings.TrimSpace(req.OperationalArea)
+	if operationalArea == "" {
+		return nil, apperrors.BadRequest("operational area is required")
+	}
+
+	if req.OperationRadiusKM <= 0 {
+		return nil, apperrors.BadRequest("operation radius must be greater than 0")
+	}
+
+	if !req.WaiverAccepted {
+		return nil, apperrors.BadRequest("waiver must be accepted")
+	}
+
+	hashedNIK := s.hasher.HashNIK(req.NIK)
+
+	existingUser, err := s.userRepository.GetUser(tx, model.GetUserParam{
+		Email: session.Email,
+	})
+	if err == nil && existingUser != nil {
+		return nil, apperrors.Conflict("email already registered")
+	}
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	existingProfile, err := s.courierProfileRepository.GetCourierProfile(tx, model.GetCourierProfileParam{
+		NIK: hashedNIK,
+	})
+	if err == nil && existingProfile != nil {
+		return nil, apperrors.Conflict("nik already registered")
+	}
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	role, err := s.roleRepository.GetRole(tx, model.GetRoleParam{
+		RoleName: courierRoleName,
+	})
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.Wrap(err, http.StatusInternalServerError, "courier role is not seeded")
+		}
+		return nil, err
+	}
+
+	user := &entity.User{
+		UserID:    uuid.New(),
+		RoleID:    role.RoleID,
+		Name:      fullName,
+		Email:     session.Email,
+		Password:  session.PasswordHash,
+		Status:    "active",
+		KYCStatus: "approved",
+	}
+
+	err = s.userRepository.CreateUser(tx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now().UTC()
+	profile := &entity.CourierProfile{
+		ProfileID:         uuid.New(),
+		UserID:            user.UserID,
+		NIK:               hashedNIK,
+		VehicleType:       vehicleType,
+		VehicleCapacityKG: vehicleCapacityKG,
+		OperationalArea:   operationalArea,
+		OperationRadiusKM: req.OperationRadiusKM,
+		WaiverAccepted:    true,
+		WaiverAcceptedAt:  now,
+	}
+
+	err = s.courierProfileRepository.CreateCourierProfile(tx, profile)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.registrationRepository.DeleteRegistrationSession(tx, session)
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := s.jwtAuth.CreateJWTToken(user.UserID, role.RoleName)
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Commit().Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.CompleteCourierRegisterResponse{
+		Token: token,
+		User: model.RegisterUserResponse{
+			UserID:      user.UserID,
+			Role:        role.RoleName,
+			DisplayRole: resolveDisplayRole(role.RoleName),
+			Name:        user.Name,
+			Email:       user.Email,
+			Status:      user.Status,
+			KYCStatus:   user.KYCStatus,
+		},
+		Courier: model.CourierRegisterResponse{
+			ProfileID:         profile.ProfileID,
+			UserID:            profile.UserID,
+			VehicleType:       profile.VehicleType,
+			VehicleCapacityKG: profile.VehicleCapacityKG,
+			OperationalArea:   profile.OperationalArea,
+			OperationRadiusKM: profile.OperationRadiusKM,
+			WaiverAccepted:    profile.WaiverAccepted,
+		},
+	}, nil
+}
+
 func (s *AuthService) CompleteStoreRegister(req model.CompleteStoreRegisterRequest) (*model.CompleteStoreRegisterResponse, error) {
 	tx := s.db.Begin()
 	defer tx.Rollback()
@@ -880,8 +1054,41 @@ func resolveDisplayRole(roleName string) string {
 		return "toko_mitra"
 	}
 
+	if roleName == courierRoleName {
+		return "relawan_kurir"
+	}
+
 	return roleName
 }
+
+func normalizeCourierVehicleType(vehicleType string) (string, error) {
+	vehicleType = strings.ToLower(strings.TrimSpace(vehicleType))
+	vehicleType = strings.ReplaceAll(vehicleType, "_", "-")
+
+	switch vehicleType {
+	case "motor", "mobil", "pick-up", "pickup":
+		if vehicleType == "pickup" {
+			return "pick-up", nil
+		}
+		return vehicleType, nil
+	default:
+		return "", apperrors.BadRequest("unsupported vehicle type")
+	}
+}
+
+func defaultCourierVehicleCapacityKG(vehicleType string) int {
+	switch vehicleType {
+	case "motor":
+		return 50
+	case "mobil":
+		return 300
+	case "pick-up":
+		return 1000
+	default:
+		return 0
+	}
+}
+
 func normalizeRegisterRole(roleName string) (string, error) {
 	roleName = strings.ToLower(strings.TrimSpace(roleName))
 	if roleName == "" {

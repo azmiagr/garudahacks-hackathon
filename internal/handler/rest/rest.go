@@ -53,6 +53,9 @@ func (r *Rest) MountEndpoint() {
 	donorRegister := auth.Group("/register/donor")
 	donorRegister.POST("/profile", r.CompleteDonorRegister)
 
+	courierRegister := auth.Group("/register/courier")
+	courierRegister.POST("/profile", r.CompleteCourierRegister)
+
 	storeRegister := auth.Group("/register/store")
 	storeRegister.POST("/profile", r.CompleteStoreRegister)
 

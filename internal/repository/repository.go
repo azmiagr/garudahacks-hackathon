@@ -10,6 +10,7 @@ type Repository struct {
 	RegistrationRepository          IRegistrationRepository
 	AdminPoskoProfileRepository     IAdminPoskoProfileRepository
 	DonorProfileRepository          IDonorProfileRepository
+	CourierProfileRepository        ICourierProfileRepository
 	AdminDashboardRepository        IAdminDashboardRepository
 	PostRepository                  IPostRepository
 	DisasterReportRepository        IDisasterReportRepository
@@ -39,6 +40,7 @@ func NewRepository(db *gorm.DB) *Repository {
 		RegistrationRepository:          NewRegistrationRepository(db),
 		AdminPoskoProfileRepository:     NewAdminPoskoProfileRepository(db),
 		DonorProfileRepository:          NewDonorProfileRepository(db),
+		CourierProfileRepository:        NewCourierProfileRepository(db),
 		AdminDashboardRepository:        NewAdminDashboardRepository(db),
 		PostRepository:                  NewPostRepository(db),
 		DisasterReportRepository:        NewDisasterReportRepository(db),
