@@ -241,7 +241,13 @@ func applyDonorDonationTransactionStatusFilter(query *gorm.DB, status string) *g
 	case "pending":
 		return query.Where("d.donation_status = ?", "pending")
 	case "locked":
-		return query.Where("d.donation_status = ? AND o.order_id IS NOT NULL AND vp.verified_at IS NULL", "approved")
+		return query.Where("d.donation_status = ? AND o.order_id IS NOT NULL AND vp.verified_at IS NULL AND (o.order_status = ? OR o.order_status IS NULL)", "approved", "pending")
+	case "preparing":
+		return query.Where("d.donation_status = ? AND o.order_status IN ? AND vp.verified_at IS NULL", "approved", []string{"accepted", "preparing"})
+	case "ready":
+		return query.Where("d.donation_status = ? AND o.order_status = ? AND vp.verified_at IS NULL", "approved", "ready_for_pickup")
+	case "shipping":
+		return query.Where("d.donation_status = ? AND o.order_status IN ? AND vp.verified_at IS NULL", "approved", []string{"picked_up", "in_transit", "delivered"})
 	case "completed":
 		return query.Where("vp.verified_at IS NOT NULL")
 	case "refund":

@@ -186,6 +186,7 @@ func buildDonorDonationTransactionCustodyLogs(rows []model.DonorDonationTransact
 func resolveDonorTransactionStatus(row model.DonorDonationTransactionListRow) string {
 	paymentStatus := strings.ToLower(strings.TrimSpace(row.PaymentStatus))
 	donationStatus := strings.ToLower(strings.TrimSpace(row.DonationStatus))
+	orderStatus := strings.ToLower(strings.TrimSpace(row.OrderStatus))
 
 	if donationStatus == donationStatusRejected || isFailedMidtransNotification(paymentStatus) {
 		return "refund"
@@ -194,6 +195,14 @@ func resolveDonorTransactionStatus(row model.DonorDonationTransactionListRow) st
 		return "completed"
 	}
 	if donationStatus == donationStatusApproved && row.LockedOrderID != "" {
+		switch orderStatus {
+		case entity.OrderStatusAccepted, entity.OrderStatusPreparing:
+			return "preparing"
+		case entity.OrderStatusReadyForPickup:
+			return "ready"
+		case entity.OrderStatusPickedUp, entity.OrderStatusInTransit, entity.OrderStatusDelivered:
+			return "shipping"
+		}
 		return "locked"
 	}
 	return "pending"
@@ -203,8 +212,14 @@ func buildDonorTransactionStatusLabel(status string) string {
 	switch status {
 	case "completed":
 		return "Selesai + Foto"
-	case "locked":
+	case "shipping":
 		return "Dikirim Kurir"
+	case "ready":
+		return "Menunggu Kurir"
+	case "preparing":
+		return "Disiapkan Toko"
+	case "locked":
+		return "Dana Terkunci"
 	case "refund":
 		return "Refund Otomatis"
 	default:
@@ -216,6 +231,10 @@ func buildDonorTransactionBadgeVariant(status string) string {
 	switch status {
 	case "completed":
 		return "success"
+	case "shipping":
+		return "info"
+	case "ready", "preparing":
+		return "warning"
 	case "locked":
 		return "warning"
 	case "refund":
@@ -229,11 +248,17 @@ func buildDonorTransactionProgressText(status string, custodyStepCount int) stri
 	switch status {
 	case "completed":
 		return "Bukti foto tersedia"
+	case "shipping":
+		return "Bantuan sedang dikirim"
+	case "ready":
+		return "Menunggu kurir mengambil bantuan"
+	case "preparing":
+		return "Bantuan sedang disiapkan toko"
 	case "locked":
 		if custodyStepCount <= 0 {
 			return "Dana terkunci"
 		}
-		return "Rantai kustodi berjalan"
+		return "Menunggu toko menerima order"
 	case "refund":
 		return "Dana dikembalikan"
 	default:
@@ -253,7 +278,7 @@ func resolveDonorTransactionOccurredAt(row model.DonorDonationTransactionListRow
 
 func normalizeDonorTransactionStatus(status string) string {
 	switch strings.ToLower(strings.TrimSpace(status)) {
-	case "pending", "locked", "completed", "refund":
+	case "pending", "locked", "preparing", "ready", "shipping", "completed", "refund":
 		return strings.ToLower(strings.TrimSpace(status))
 	default:
 		return "all"
